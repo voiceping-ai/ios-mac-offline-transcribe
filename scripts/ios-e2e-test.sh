@@ -56,6 +56,27 @@ get_wait_time() {
     esac
 }
 
+# Guard simctl screenshots with a timeout so one hung capture does not stall the suite.
+safe_screenshot() {
+    local output_path="$1"
+    python3 - "$SIMULATOR_ID" "$output_path" <<'PY'
+import subprocess
+import sys
+
+sim_id, out_path = sys.argv[1], sys.argv[2]
+try:
+    subprocess.run(
+        ["xcrun", "simctl", "io", sim_id, "screenshot", out_path],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        timeout=15,
+        check=False,
+    )
+except Exception:
+    pass
+PY
+}
+
 echo "=== iOS E2E Test Suite ==="
 echo "Mode: $([ "$USE_XCUITEST" = true ] && echo "XCUITest" || echo "simctl")"
 echo "Models to test: ${MODELS[*]}"
@@ -155,7 +176,7 @@ if [ "$USE_XCUITEST" = true ]; then
             echo "  NO RESULT - result.json not found"
         fi
 
-        PNG_COUNT=$(ls "$MODEL_DIR"/*.png 2>/dev/null | wc -l | tr -d ' ')
+        PNG_COUNT=$(find "$MODEL_DIR" -maxdepth 1 -name "*.png" 2>/dev/null | wc -l | tr -d ' ')
         echo "  Screenshots: $PNG_COUNT"
         echo ""
     done
@@ -212,7 +233,7 @@ for MODEL_ID in "${MODELS[@]}"; do
 
     # Take initial screenshot after brief delay
     sleep 5
-    xcrun simctl io "$SIMULATOR_ID" screenshot "$MODEL_DIR/01_model_loading.png" 2>/dev/null
+    safe_screenshot "$MODEL_DIR/01_model_loading.png"
 
     # Wait for transcription to complete
     ELAPSED=5
@@ -229,14 +250,14 @@ for MODEL_ID in "${MODELS[@]}"; do
 
         # Take periodic screenshot during download
         if [ $((ELAPSED % 30)) -eq 0 ]; then
-            xcrun simctl io "$SIMULATOR_ID" screenshot "$MODEL_DIR/02_progress_${ELAPSED}s.png" 2>/dev/null
+            safe_screenshot "$MODEL_DIR/02_progress_${ELAPSED}s.png"
             echo "  Progress screenshot at ${ELAPSED}s"
         fi
     done
 
     # Take final screenshot (inference result)
     sleep 3
-    xcrun simctl io "$SIMULATOR_ID" screenshot "$MODEL_DIR/03_inference_result.png" 2>/dev/null
+    safe_screenshot "$MODEL_DIR/03_inference_result.png"
 
     # Copy result.json
     if [ -f "$RESULT_FILE" ]; then

@@ -20,11 +20,11 @@ ALL_TESTS=(
     "test_02_testFileTranscription"
     "test_03_recordButtonStates"
     "test_04_settingsNavigation"
-    "test_05_saveAndHistory"
-    "test_06_historyEmptyAndDelete"
+    "test_05_copyTextViaOverflowMenu"
+    "test_06_modelInfoDisplay"
     "test_07_overflowMenuCopyAndClear"
     "test_08_modelSwitchInSettings"
-    "test_09_tabSwitchPreservesState"
+    "test_09_transcriptionPersistsAfterSettings"
     "test_10_modelSetupOnboarding"
 )
 

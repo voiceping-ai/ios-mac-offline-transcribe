@@ -27,21 +27,7 @@ OfflineTranscription.xcodeproj/project.pbxproj
 .swiftpm/xcode/xcuserdata/
 Package.resolved
 
-# === Android ===
-OfflineTranscriptionAndroid/.gradle/
-OfflineTranscriptionAndroid/build/
-OfflineTranscriptionAndroid/app/build/
-OfflineTranscriptionAndroid/local.properties
-OfflineTranscriptionAndroid/.cxx/
-OfflineTranscriptionAndroid/app/.cxx/
-OfflineTranscriptionAndroid/captures/
-
-# Android Studio / IntelliJ
-OfflineTranscriptionAndroid/.idea/
-*.iml
-
 # sherpa-onnx binaries (download from GitHub releases, see README)
-OfflineTranscriptionAndroid/app/libs/*.aar
 LocalPackages/SherpaOnnxKit/*.xcframework/
 
 # === IDE ===
@@ -54,20 +40,14 @@ LocalPackages/SherpaOnnxKit/*.xcframework/
 # === Secrets / Environment ===
 .env
 .env.*
-*.keystore
-*.jks
 *.p12
 *.pem
 *.key
-google-services.json
 GoogleService-Info.plist
 
 # === Test Evidence / Screenshots ===
 artifacts/
 screenshots/
-
-# === Room Schema Exports (using manual migrations) ===
-OfflineTranscriptionAndroid/app/schemas/
 
 # === Claude Code ===
 .claude/

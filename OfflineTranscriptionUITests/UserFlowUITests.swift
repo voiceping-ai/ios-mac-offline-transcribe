@@ -1,7 +1,8 @@
 import XCTest
 
-/// 10 user flow tests covering mic button, settings navigation, save/history, and edge cases.
+/// 10 user flow tests covering mic button, settings navigation, transcription, and edge cases.
 /// Each test captures screenshots at key states for visual validation.
+/// Note: This is a transcription-only app — no save/history features.
 final class UserFlowUITests: XCTestCase {
 
     // MARK: - Constants
@@ -41,13 +42,9 @@ final class UserFlowUITests: XCTestCase {
 
         captureScreenshot(app, step: "02_loaded")
 
-        // Verify model name displayed
+        // Verify main view is visible
         let mainTab = app.otherElements["main_tab_view"]
-        XCTAssertTrue(mainTab.exists, "Main tab view should be visible")
-
-        // Verify tab bar has Transcribe button
-        let transcribeTab = app.tabBars.buttons["Transcribe"]
-        XCTAssertTrue(transcribeTab.exists, "Transcribe tab should exist")
+        XCTAssertTrue(mainTab.exists, "Main view should be visible")
     }
 
     // MARK: - Test 2: Test File Transcription
@@ -226,9 +223,9 @@ final class UserFlowUITests: XCTestCase {
         captureScreenshot(app, step: "03_dismissed")
     }
 
-    // MARK: - Test 5: Save and History
+    // MARK: - Test 5: Copy Text via Overflow Menu
 
-    func test_05_saveAndHistory() {
+    func test_05_copyTextViaOverflowMenu() {
         let app = launchApp(modelId: "whisper-tiny")
         waitForModelLoad(app)
 
@@ -239,111 +236,65 @@ final class UserFlowUITests: XCTestCase {
 
         captureScreenshot(app, step: "01_transcribed")
 
-        // Save
-        let saveBtn = app.buttons["save_button"]
-        XCTAssertTrue(saveBtn.waitForExistence(timeout: shortTimeout))
-        saveBtn.tap()
-
-        // Verify saved alert
-        let savedAlert = app.alerts["Saved"]
-        XCTAssertTrue(
-            savedAlert.waitForExistence(timeout: shortTimeout),
-            "Saved alert should appear"
-        )
-
-        captureScreenshot(app, step: "02_saved")
-        savedAlert.buttons["OK"].tap()
-
-        // Switch to History tab
-        app.tabBars.buttons["History"].tap()
+        // Open overflow menu
+        let overflowMenu = app.buttons["overflow_menu"]
+        XCTAssertTrue(overflowMenu.waitForExistence(timeout: shortTimeout))
+        overflowMenu.tap()
         sleep(1)
 
-        // Verify history row exists
-        let historyRow = app.buttons.matching(identifier: "history_row").firstMatch
+        captureScreenshot(app, step: "02_menu_open")
+
+        // Tap Copy Text
+        let copyBtn = app.buttons["Copy Text"]
         XCTAssertTrue(
-            historyRow.waitForExistence(timeout: shortTimeout),
-            "History should contain a saved entry"
+            copyBtn.waitForExistence(timeout: shortTimeout),
+            "Copy Text button should exist in overflow menu"
         )
-
-        captureScreenshot(app, step: "03_history")
-
-        // Tap to view detail
-        historyRow.tap()
+        copyBtn.tap()
         sleep(1)
 
-        let detailText = app.staticTexts["detail_text"]
-        XCTAssertTrue(
-            detailText.waitForExistence(timeout: shortTimeout),
-            "Detail text should be visible"
-        )
+        // Verify text is still displayed after copy
+        XCTAssertTrue(confirmedText.exists, "Transcription text should remain after copy")
 
-        captureScreenshot(app, step: "04_detail")
+        captureScreenshot(app, step: "03_copied")
     }
 
-    // MARK: - Test 6: History Empty State and Delete
+    // MARK: - Test 6: Model Info Display
 
-    func test_06_historyEmptyAndDelete() {
-        let app = launchApp(modelId: "whisper-tiny", additionalArgs: ["--reset-state"])
+    func test_06_modelInfoDisplay() {
+        let app = launchApp(modelId: "whisper-tiny")
         waitForModelLoad(app)
 
-        // Go to History — should be empty
-        app.tabBars.buttons["History"].tap()
-        sleep(1)
+        // Verify model info label shows
+        let modelInfo = app.staticTexts["model_info_label"]
+        XCTAssertTrue(modelInfo.exists, "Model info label should be visible")
 
-        // ContentUnavailableView renders as various element types in XCUITest
-        let emptyState = app.otherElements["history_empty_state"]
-        let emptyText = app.staticTexts["No Transcriptions Yet"]
-        let emptyStaticText = app.staticTexts["history_empty_state"]
-        var foundEmpty = emptyState.waitForExistence(timeout: shortTimeout)
-        if !foundEmpty { foundEmpty = emptyText.exists || emptyStaticText.exists }
-        // If no history entries exist, the list should be empty (even if ContentUnavailableView not found)
-        if !foundEmpty {
-            let historyRow = app.buttons.matching(identifier: "history_row").firstMatch
-            foundEmpty = !historyRow.exists
-        }
-        XCTAssertTrue(foundEmpty, "Empty state should be visible (or no history rows)")
+        captureScreenshot(app, step: "01_model_info")
 
-        captureScreenshot(app, step: "01_empty")
-
-        // Go back to Transcribe, make a transcription, save
-        app.tabBars.buttons["Transcribe"].tap()
-        sleep(1)
+        // Transcribe and verify model info persists
         tapTestFile(app)
-
         let confirmedText = app.staticTexts["confirmed_text"]
         XCTAssertTrue(confirmedText.waitForExistence(timeout: transcriptionTimeout))
 
-        let saveBtn = app.buttons["save_button"]
-        XCTAssertTrue(saveBtn.waitForExistence(timeout: shortTimeout))
-        saveBtn.tap()
+        XCTAssertTrue(modelInfo.exists, "Model info should remain visible after transcription")
 
-        let savedAlert = app.alerts["Saved"]
-        XCTAssertTrue(savedAlert.waitForExistence(timeout: shortTimeout))
-        savedAlert.buttons["OK"].tap()
+        captureScreenshot(app, step: "02_with_transcription")
 
-        // Back to History — should have entry
-        app.tabBars.buttons["History"].tap()
+        // Clear and verify model info still shows
+        let overflowMenu = app.buttons["overflow_menu"]
+        XCTAssertTrue(overflowMenu.waitForExistence(timeout: shortTimeout))
+        overflowMenu.tap()
         sleep(1)
 
-        let historyRow = app.buttons.matching(identifier: "history_row").firstMatch
-        XCTAssertTrue(
-            historyRow.waitForExistence(timeout: shortTimeout),
-            "History should now contain an entry"
-        )
-
-        captureScreenshot(app, step: "02_with_entry")
-
-        // Swipe to delete
-        historyRow.swipeLeft()
-        sleep(1)
-
-        let deleteBtn = app.buttons["Delete"]
-        if deleteBtn.waitForExistence(timeout: 3) {
-            deleteBtn.tap()
+        let clearBtn = app.buttons["Clear"]
+        if clearBtn.waitForExistence(timeout: 3) {
+            clearBtn.tap()
+            sleep(2)
         }
-        sleep(1)
 
-        captureScreenshot(app, step: "03_deleted")
+        XCTAssertTrue(modelInfo.exists, "Model info should remain after clearing transcription")
+
+        captureScreenshot(app, step: "03_after_clear")
     }
 
     // MARK: - Test 7: Overflow Menu Copy and Clear
@@ -449,9 +400,9 @@ final class UserFlowUITests: XCTestCase {
         captureScreenshot(app, step: "03_switched")
     }
 
-    // MARK: - Test 9: Tab Switch Preserves State
+    // MARK: - Test 9: Transcription Persists After Settings
 
-    func test_09_tabSwitchPreservesState() {
+    func test_09_transcriptionPersistsAfterSettings() {
         let app = launchApp(modelId: "whisper-tiny")
         waitForModelLoad(app)
 
@@ -464,24 +415,28 @@ final class UserFlowUITests: XCTestCase {
 
         captureScreenshot(app, step: "01_transcribed")
 
-        // Switch to History tab
-        app.tabBars.buttons["History"].tap()
+        // Open settings
+        let settingsBtn = app.buttons["settings_button"]
+        XCTAssertTrue(settingsBtn.waitForExistence(timeout: shortTimeout))
+        settingsBtn.tap()
         sleep(1)
 
-        captureScreenshot(app, step: "02_history")
+        captureScreenshot(app, step: "02_settings")
 
-        // Switch back to Transcribe tab
-        app.tabBars.buttons["Transcribe"].tap()
+        // Dismiss settings
+        let doneBtn = app.buttons["settings_done_button"]
+        XCTAssertTrue(doneBtn.waitForExistence(timeout: shortTimeout))
+        doneBtn.tap()
         sleep(1)
 
         // Verify text preserved
-        XCTAssertTrue(confirmedText.exists, "Confirmed text should still exist after tab switch")
+        XCTAssertTrue(confirmedText.exists, "Confirmed text should still exist after settings round-trip")
         XCTAssertEqual(
             confirmedText.label, originalText,
-            "Transcription text should be preserved across tab switches"
+            "Transcription text should be preserved after opening and closing settings"
         )
 
-        captureScreenshot(app, step: "03_back")
+        captureScreenshot(app, step: "03_preserved")
     }
 
     // MARK: - Test 10: Model Setup Onboarding
