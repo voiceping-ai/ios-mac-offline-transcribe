@@ -71,3 +71,7 @@ OfflineTranscriptionAndroid/app/schemas/
 
 # === Claude Code ===
 .claude/
+
+# === Python cache ===
+__pycache__/
+*.pyc
