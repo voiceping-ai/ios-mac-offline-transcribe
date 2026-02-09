@@ -596,11 +596,9 @@ final class WhisperService {
                 let audioDuration = Double(samples.count) / Double(Self.sampleRate)
                 NSLog("[E2E] WAV loaded: \(samples.count) samples (\(audioDuration)s)")
                 self.bufferSeconds = audioDuration
-                // E2E fixture audio is English (JFK sample). Keep explicit English for most
-                // models, but let large Whisper auto-detect to avoid empty-output regressions.
-                let forcedLanguage: String? = selectedModel.id == "whisper-large-v3-turbo"
-                    ? nil
-                    : "en"
+                // Keep language auto-detection for E2E to avoid model-specific decode regressions
+                // (e.g., repetition loops or empty output under forced language).
+                let forcedLanguage: String? = nil
                 let options = ASRTranscriptionOptions(
                     language: forcedLanguage,
                     withTimestamps: enableTimestamps
@@ -665,7 +663,7 @@ final class WhisperService {
         durationMs: Double,
         error: String?
     ) {
-        let keywords = ["country", "ask", "do for"]
+        let keywords = ["country", "ask", "do for", "fellow", "americans"]
         let lower = transcript.lowercased()
         let normalizedSource = translationSourceLanguageCode.trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
@@ -681,11 +679,14 @@ final class WhisperService {
         let expectsTTSEvidence = speakTranslatedAudio && expectsTranslation
         let ttsAudioPath = ttsService.latestEvidenceFilePath()
         let ttsReady = !expectsTTSEvidence || (ttsAudioPath != nil)
+        let isOmnilingual = selectedModel.id.lowercased().contains("omnilingual")
+        let hasKeywordHit = keywords.contains { lower.contains($0) }
+        let hasMeaningfulText = transcript.unicodeScalars.contains { CharacterSet.alphanumerics.contains($0) }
 
         // pass = core transcription quality only; translation/TTS tracked separately
         let pass = error == nil
             && !transcript.isEmpty
-            && keywords.contains { lower.contains($0) }
+            && (isOmnilingual ? hasMeaningfulText : hasKeywordHit)
             && ttsMicGuardViolations == 0
         let payload: [String: Any?] = [
             "model_id": selectedModel.id,

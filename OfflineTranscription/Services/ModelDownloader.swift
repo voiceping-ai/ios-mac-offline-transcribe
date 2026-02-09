@@ -15,7 +15,7 @@ final class ModelDownloader: NSObject, @unchecked Sendable {
     nonisolated(unsafe) private var currentFileIndex: Int = 0
     nonisolated(unsafe) private var totalFilesToDownload: Int = 1
 
-    private static let huggingFaceOrg = "csukuangfj"
+    private static let defaultHuggingFaceOrg = "csukuangfj"
 
     /// Directory where model files are stored.
     static var modelsDirectory: URL {
@@ -122,7 +122,13 @@ final class ModelDownloader: NSObject, @unchecked Sendable {
     // MARK: - Private
 
     private static func fileURL(repo: String, filename: String) -> URL {
-        URL(string: "https://huggingface.co/\(huggingFaceOrg)/\(repo)/resolve/main/\(filename)")!
+        let repoPath: String
+        if repo.contains("/") {
+            repoPath = repo
+        } else {
+            repoPath = "\(defaultHuggingFaceOrg)/\(repo)"
+        }
+        return URL(string: "https://huggingface.co/\(repoPath)/resolve/main/\(filename)")!
     }
 
     private func downloadFile(from url: URL) async throws -> URL {

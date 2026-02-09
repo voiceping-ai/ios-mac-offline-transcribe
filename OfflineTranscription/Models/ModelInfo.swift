@@ -75,7 +75,8 @@ struct ModelInfo: Identifiable, Hashable {
             family: .whisper,
             engineType: .whisperKit,
             languages: "99 languages",
-            variant: "openai_whisper-large-v3_turbo_954MB",
+            // Compatibility fallback: route compressed ID to stable turbo runtime.
+            variant: "openai_whisper-large-v3_turbo",
             sherpaModelConfig: nil
         ),
 
@@ -173,7 +174,7 @@ struct ModelInfo: Identifiable, Hashable {
             languages: "1,600+ languages",
             variant: nil,
             sherpaModelConfig: SherpaModelConfig(
-                repoName: "sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12",
+                repoName: "csukuangfj2/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12",
                 tokens: "tokens.txt",
                 modelType: .omnilingualCtc,
                 omnilingualModel: "model.int8.onnx"

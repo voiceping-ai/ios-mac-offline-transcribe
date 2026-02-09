@@ -224,12 +224,90 @@ final class WhisperKitEngine: ASREngine {
             return ASRResult(text: "", segments: [], language: nil)
         }
 
-        // Convert WhisperKit segments → ASRSegment
-        let segments = result.segments.map { seg in
-            ASRSegment(id: seg.id, text: seg.text, start: seg.start, end: seg.end)
+        let primary = mapResult(result, timeOffset: 0, startingId: 0)
+        if !primary.text.isEmpty {
+            return primary
         }
-        let text = result.segments.map(\.text).joined(separator: " ")
+
+        // Fallback for some large variants: decode long clips in overlapping chunks.
+        let chunked = try await transcribeChunked(
+            whisperKit: whisperKit,
+            audioArray: audioArray,
+            decodingOptions: decodingOptions
+        )
+        return chunked.text.isEmpty ? primary : chunked
+    }
+
+    private func mapResult(
+        _ result: TranscriptionResult,
+        timeOffset: Float,
+        startingId: Int
+    ) -> ASRResult {
+        let segments = result.segments.enumerated().map { idx, seg in
+            ASRSegment(
+                id: startingId + idx,
+                text: seg.text,
+                start: seg.start + timeOffset,
+                end: seg.end + timeOffset
+            )
+        }
+
+        let segmentText = result.segments.map(\.text)
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = segmentText.isEmpty
+            ? result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            : segmentText
 
         return ASRResult(text: text, segments: segments, language: result.language)
+    }
+
+    private func transcribeChunked(
+        whisperKit: WhisperKit,
+        audioArray: [Float],
+        decodingOptions: DecodingOptions
+    ) async throws -> ASRResult {
+        let chunkSize = 16000 * 30
+        let overlap = 16000
+        var offset = 0
+        var nextId = 0
+        var combinedText: [String] = []
+        var combinedSegments: [ASRSegment] = []
+        var detectedLanguage: String?
+
+        while offset < audioArray.count {
+            let end = min(offset + chunkSize, audioArray.count)
+            let chunk = Array(audioArray[offset..<end])
+            let chunkOffsetSeconds = Float(offset) / 16000.0
+
+            let chunkResults = try await whisperKit.transcribe(
+                audioArray: chunk,
+                decodeOptions: decodingOptions
+            )
+            if let chunkResult = chunkResults.first {
+                let mapped = mapResult(
+                    chunkResult,
+                    timeOffset: chunkOffsetSeconds,
+                    startingId: nextId
+                )
+                if !mapped.text.isEmpty {
+                    combinedText.append(mapped.text)
+                    combinedSegments.append(contentsOf: mapped.segments)
+                    nextId += mapped.segments.count
+                    if detectedLanguage == nil {
+                        detectedLanguage = mapped.language
+                    }
+                }
+            }
+
+            if end == audioArray.count { break }
+            offset = max(end - overlap, offset + 1)
+        }
+
+        return ASRResult(
+            text: combinedText.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines),
+            segments: combinedSegments,
+            language: detectedLanguage
+        )
     }
 }
