@@ -75,7 +75,7 @@ struct ModelInfo: Identifiable, Hashable {
             family: .whisper,
             engineType: .whisperKit,
             languages: "99 languages",
-            variant: "openai_whisper-large-v3_turbo_1049MB",
+            variant: "openai_whisper-large-v3_turbo_954MB",
             sherpaModelConfig: nil
         ),
 

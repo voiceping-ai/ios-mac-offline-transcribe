@@ -230,9 +230,22 @@ struct TranscriptionView: View {
                 atomically: true,
                 encoding: .utf8
             )
-            // Wait until model is loaded
-            while whisperService.modelState != .loaded {
+            let modelId = Self.autoTestModelId(from: args) ?? whisperService.selectedModel.id
+            let timeoutSeconds = Self.autoTestLoadTimeoutSeconds(for: modelId)
+            let deadline = Date().addingTimeInterval(timeoutSeconds)
+
+            // Wait until model is loaded, but fail fast with an E2E result when setup stalls.
+            while whisperService.modelState != .loaded && Date() < deadline {
+                if whisperService.modelState == .error || whisperService.modelState == .unloaded {
+                    break
+                }
                 try? await Task.sleep(for: .milliseconds(200))
+            }
+            guard whisperService.modelState == .loaded else {
+                whisperService.writeE2EFailure(
+                    reason: "model load failed/timed out for \(modelId) (state=\(whisperService.modelState.rawValue))"
+                )
+                return
             }
             guard !didAutoTest else { return }
             didAutoTest = true
@@ -241,6 +254,20 @@ struct TranscriptionView: View {
             viewModel?.transcribeTestFile(wavPath)
         }
         #endif
+    }
+
+    private static func autoTestModelId(from args: [String]) -> String? {
+        guard let index = args.firstIndex(of: "--model-id"), index + 1 < args.count else {
+            return nil
+        }
+        return args[index + 1]
+    }
+
+    private static func autoTestLoadTimeoutSeconds(for modelId: String) -> TimeInterval {
+        if modelId.contains("large") || modelId.contains("omnilingual") { return 480 }
+        if modelId == "whisper-small" || modelId == "parakeet-tdt-v3" { return 300 }
+        if modelId == "whisper-base" { return 240 }
+        return 120
     }
 
     // MARK: - Subviews

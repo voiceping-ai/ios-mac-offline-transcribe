@@ -570,6 +570,12 @@ final class WhisperService {
         guard let engine = activeEngine, engine.modelState == .loaded else {
             NSLog("[E2E] ERROR: model not ready, activeEngine=\(String(describing: activeEngine))")
             lastError = .modelNotReady
+            writeE2EResult(
+                transcript: "",
+                translatedText: "",
+                durationMs: 0,
+                error: "model not ready"
+            )
             return
         }
 
@@ -583,10 +589,13 @@ final class WhisperService {
                 let audioDuration = Double(samples.count) / Double(Self.sampleRate)
                 NSLog("[E2E] WAV loaded: \(samples.count) samples (\(audioDuration)s)")
                 self.bufferSeconds = audioDuration
-                // E2E fixture audio is English (JFK sample). Force English to stabilize
-                // decoding across multilingual backends (e.g. Whisper, Omnilingual).
+                // E2E fixture audio is English (JFK sample). Keep explicit English for most
+                // models, but let large Whisper auto-detect to avoid empty-output regressions.
+                let forcedLanguage: String? = selectedModel.id.contains("whisper-large-v3-turbo")
+                    ? nil
+                    : "en"
                 let options = ASRTranscriptionOptions(
-                    language: "en",
+                    language: forcedLanguage,
                     withTimestamps: enableTimestamps
                 )
                 NSLog("[E2E] Starting transcription with engine \(type(of: engine))...")
@@ -629,6 +638,15 @@ final class WhisperService {
                 )
             }
         }
+    }
+
+    func writeE2EFailure(reason: String) {
+        writeE2EResult(
+            transcript: "",
+            translatedText: "",
+            durationMs: 0,
+            error: reason
+        )
     }
 
     private func writeE2EResult(

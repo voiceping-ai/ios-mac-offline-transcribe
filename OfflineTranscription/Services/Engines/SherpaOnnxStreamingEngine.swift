@@ -130,9 +130,42 @@ final class SherpaOnnxStreamingEngine: ASREngine {
     }
 
     func transcribe(audioArray: [Float], options: ASRTranscriptionOptions) async throws -> ASRResult {
-        // For streaming, transcribe is not the primary path.
-        enqueueAudio(audioArray)
-        return getStreamingResult() ?? ASRResult(text: "", segments: [], language: nil)
+        guard let recognizer else {
+            throw AppError.modelNotReady
+        }
+
+        // One-shot file transcription path used by E2E:
+        // feed all audio, mark input finished, and decode to completion.
+        let scaledSamples = audioArray.map { $0 * 32768.0 }
+        let text = await withCheckedContinuation { (continuation: CheckedContinuation<String, Never>) in
+            decodeQueue.async {
+                recognizer.reset(hotwords: "")
+                recognizer.acceptWaveform(samples: scaledSamples, sampleRate: 16000)
+                recognizer.inputFinished()
+                while recognizer.isReady() {
+                    recognizer.decode()
+                }
+                continuation.resume(
+                    returning: recognizer.getResult().text.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+            }
+        }
+
+        latestText = text
+        guard !text.isEmpty else {
+            return ASRResult(text: "", segments: [], language: options.language)
+        }
+
+        let duration = Float(audioArray.count) / 16000.0
+        let segment = ASRSegment(
+            id: segmentIdCounter,
+            text: " " + text,
+            start: 0,
+            end: duration
+        )
+        segmentIdCounter += 1
+
+        return ASRResult(text: text, segments: [segment], language: options.language ?? "en")
     }
 
     /// Dispatch audio to the serial decode queue so decoding stays off the main actor.
