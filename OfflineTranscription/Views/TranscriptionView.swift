@@ -10,6 +10,9 @@ struct TranscriptionView: View {
     @State private var lastAutoScrollAt: Date = .distantPast
 
     private let autoScrollInterval: TimeInterval = 0.25
+    private var isAutoTestMode: Bool {
+        ProcessInfo.processInfo.arguments.contains("--auto-test")
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -206,6 +209,30 @@ struct TranscriptionView: View {
         }
         .navigationTitle("Transcribe")
         .navigationBarTitleDisplayMode(.inline)
+        .overlay(alignment: .topTrailing) {
+            #if DEBUG
+            if isAutoTestMode, !whisperService.e2eOverlayPayload.isEmpty {
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("E2E Result Ready")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                    Text(whisperService.e2eOverlayPayload)
+                        .font(.caption2.monospaced())
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .accessibilityIdentifier("e2e_overlay_payload")
+                }
+                .padding(8)
+                .background(.black.opacity(0.72))
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(8)
+                .accessibilityIdentifier("e2e_overlay")
+                .accessibilityLabel("e2e_overlay")
+                .accessibilityValue(whisperService.e2eOverlayPayload)
+            }
+            #endif
+        }
         .sheet(isPresented: $showSettings) {
             ModelSettingsSheet(
                 fullText: viewModel?.fullText ?? "",

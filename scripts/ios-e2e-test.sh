@@ -156,11 +156,19 @@ if [ "$USE_XCUITEST" = true ]; then
             -only-testing:"OfflineTranscriptionUITests/AllModelsE2ETest/$METHOD" \
             -resultBundlePath "$MODEL_DIR/result.xcresult" \
             2>&1 || true)
+        printf "%s\n" "$RESULT" > "$MODEL_DIR/xcodebuild.log"
 
         if echo "$RESULT" | grep -q "Test Suite.*passed"; then
             echo "  XCUITest passed"
         elif echo "$RESULT" | grep -q "TEST_FAILED"; then
             echo "  XCUITest failed"
+        fi
+
+        # Real-device runs may keep E2E result only in test logs (not host /tmp).
+        LOG_RESULT=$(echo "$RESULT" | sed -n "s/^.*\\[E2E_RESULT\\]\\[$MODEL_ID\\] //p" | tail -n 1)
+        if [ -n "$LOG_RESULT" ]; then
+            printf "%s\n" "$LOG_RESULT" > "$MODEL_DIR/result.json"
+            echo "  Parsed E2E result from xcodebuild log"
         fi
 
         # Collect evidence from /tmp/e2e_evidence/{modelId}/ (written by test)

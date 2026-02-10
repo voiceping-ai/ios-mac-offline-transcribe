@@ -68,6 +68,8 @@ final class WhisperService {
     private(set) var translatedHypothesisText: String = ""
     private(set) var translationWarning: String?
     private(set) var translationModelStatus: TranslationModelStatus = .unknown
+    /// E2E machine-readable payload surfaced to UI tests on real devices.
+    private(set) var e2eOverlayPayload: String = ""
 
     // Configuration
     var selectedModel: ModelInfo = ModelInfo.defaultModel
@@ -640,6 +642,7 @@ final class WhisperService {
         }
 
         resetTranscriptionState()
+        e2eOverlayPayload = ""
         e2eTranscribeInFlight = true
 
         cancelAndTrackTranscriptionTask()
@@ -778,11 +781,17 @@ final class WhisperService {
                 withJSONObject: payload.compactMapValues { $0 },
                 options: [.prettyPrinted]
             )
+            if let payloadText = String(data: data, encoding: .utf8) {
+                e2eOverlayPayload = payloadText
+            }
             let modelId = selectedModel.id
             let fileURL = URL(fileURLWithPath: "/tmp/e2e_result_\(modelId).json")
             try data.write(to: fileURL, options: .atomic)
             NSLog("[E2E] Result written to \(fileURL.path)")
         } catch {
+            e2eOverlayPayload = """
+            {"model_id":"\(selectedModel.id)","pass":false,"error":"failed to serialize/write E2E result"}
+            """
             NSLog("[E2E] Failed to write result file: \(error)")
         }
     }
