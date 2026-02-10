@@ -1,4 +1,4 @@
-name: OfflineTranscription
+name: VoicePingIOSOfflineTranscribe
 options:
   bundleIdPrefix: com.voiceping
   deploymentTarget:

@@ -21,7 +21,7 @@ xcuserdata/
 *.dSYM
 
 # Xcode auto-generated but regeneratable via xcodegen
-OfflineTranscription.xcodeproj/project.pbxproj
+VoicePingIOSOfflineTranscribe.xcodeproj/project.pbxproj
 
 # Swift Package Manager
 .swiftpm/xcode/xcuserdata/

@@ -1,4 +1,4 @@
-# Offline Transcription for iOS
+# VoicePing iOS Offline Transcribe
 
 [![iOS](https://img.shields.io/badge/iOS-17%2B-black)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-5.9-orange)](#tech-stack)
@@ -113,15 +113,15 @@ UI stack:
 
 ```bash
 git clone <repo-url>
-cd repo-ios-transcription-only
+cd voiceping-ios-offline-transcribe
 xcodegen generate
-open OfflineTranscription.xcodeproj
+open VoicePingIOSOfflineTranscribe.xcodeproj
 ```
 
 ### Build from CLI
 
 ```bash
-xcodebuild -project OfflineTranscription.xcodeproj \
+xcodebuild -project VoicePingIOSOfflineTranscribe.xcodeproj \
   -scheme OfflineTranscription \
   -destination 'generic/platform=iOS Simulator' build
 ```
@@ -129,7 +129,7 @@ xcodebuild -project OfflineTranscription.xcodeproj \
 ### Unit Tests
 
 ```bash
-xcodebuild test -project OfflineTranscription.xcodeproj \
+xcodebuild test -project VoicePingIOSOfflineTranscribe.xcodeproj \
   -scheme OfflineTranscription \
   -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
   -only-testing:OfflineTranscriptionTests
