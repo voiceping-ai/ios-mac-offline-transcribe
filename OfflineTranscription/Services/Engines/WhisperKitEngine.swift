@@ -193,19 +193,6 @@ final class WhisperKitEngine: ASREngine {
         let granted = await AudioProcessor.requestRecordPermission()
         guard granted else { throw AppError.microphonePermissionDenied }
 
-        // For device audio mode, set measurement mode before WhisperKit starts recording
-        if captureMode == .deviceAudio {
-            let session = AVAudioSession.sharedInstance()
-            let categoryOptions: AVAudioSession.CategoryOptions
-#if compiler(>=6.2)
-            categoryOptions = [.allowBluetoothHFP]
-#else
-            categoryOptions = [.allowBluetooth]
-#endif
-            try session.setCategory(.playAndRecord, mode: .measurement, options: categoryOptions)
-            try session.setActive(true)
-        }
-
         try whisperKit.audioProcessor.startRecordingLive(inputDeviceID: nil) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
