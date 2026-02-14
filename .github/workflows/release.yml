@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Download iOS dependencies
+        run: |
+          chmod +x ./scripts/setup-ios-deps.sh
+          ./scripts/setup-ios-deps.sh
+
+      - name: Download macOS dependencies and merge xcframeworks
+        run: |
+          chmod +x ./scripts/setup-macos-deps.sh
+          ./scripts/setup-macos-deps.sh
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Run macOS unit tests
+        run: |
+          chmod +x ./scripts/ci-macos-unit-test.sh
+          ./scripts/ci-macos-unit-test.sh
+
+      - name: Build macOS app (Release)
+        run: |
+          xcodebuild build \
+            -project VoicePingIOSOfflineTranscribe.xcodeproj \
+            -scheme OfflineTranscriptionMac \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Create DMG
+        run: |
+          chmod +x ./scripts/create-dmg.sh
+          ./scripts/create-dmg.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/VoicePingOfflineTranscribe-*.dmg
+          generate_release_notes: true

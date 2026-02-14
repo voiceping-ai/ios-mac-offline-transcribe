@@ -11,6 +11,22 @@ struct TranscriptionBubble: View {
         self.timestamp = timestamp
     }
 
+    private var confirmedBackground: Color {
+        #if os(macOS)
+        Color(.windowBackgroundColor)
+        #else
+        Color(.systemBackground)
+        #endif
+    }
+
+    private var unconfirmedBackground: Color {
+        #if os(macOS)
+        Color(.controlBackgroundColor)
+        #else
+        Color(.secondarySystemBackground)
+        #endif
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let timestamp = timestamp {
@@ -26,11 +42,7 @@ struct TranscriptionBubble: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(
-                            isConfirmed
-                                ? Color(.systemBackground)
-                                : Color(.secondarySystemBackground)
-                        )
+                        .fill(isConfirmed ? confirmedBackground : unconfirmedBackground)
                 )
         }
     }

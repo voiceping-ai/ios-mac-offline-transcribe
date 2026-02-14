@@ -1,3 +1,4 @@
+#if os(iOS)
 import SwiftUI
 import ReplayKit
 
@@ -94,3 +95,4 @@ struct BroadcastStartButton: View {
         .accessibilityIdentifier("broadcast_picker")
     }
 }
+#endif

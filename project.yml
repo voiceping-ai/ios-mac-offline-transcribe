@@ -3,16 +3,13 @@ options:
   bundleIdPrefix: com.voiceping
   deploymentTarget:
     iOS: "17.0"
+    macOS: "14.0"
   xcodeVersion: "15.0"
   generateEmptyDirectories: true
 
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    TARGETED_DEVICE_FAMILY: "1,2"
-    SUPPORTS_MAC_DESIGNED_FOR_IPHONE: false
-    SUPPORTS_MAC_DESIGNED_FOR_IPAD: false
-    SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: false
 
 configs:
   Debug: debug
@@ -33,6 +30,15 @@ packages:
     from: "2.3.0"
   SherpaOnnxKit:
     path: LocalPackages/SherpaOnnxKit
+  CactusKit:
+    path: LocalPackages/CactusKit
+  MLXKit:
+    path: LocalPackages/MLXKit
+  QwenASRKit:
+    path: LocalPackages/QwenASRKit
+  Qwen3ASRSwift:
+    url: https://github.com/ivan-digital/qwen3-asr-swift.git
+    branch: main
   FluidAudio:
     url: https://github.com/FluidInference/FluidAudio.git
     from: "0.7.9"
@@ -52,6 +58,10 @@ targets:
         GENERATE_INFOPLIST_FILE: "YES"
         CURRENT_PROJECT_VERSION: "1"
         MARKETING_VERSION: "1.0.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE: false
+        SUPPORTS_MAC_DESIGNED_FOR_IPAD: false
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: false
         INFOPLIST_KEY_CFBundleDisplayName: "VoicePing Offline Transcribe"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: "YES"
@@ -70,8 +80,14 @@ targets:
         product: Tokenizers
       - package: SherpaOnnxKit
         product: SherpaOnnxKit
+      - package: CactusKit
+        product: CactusKit
+      - package: MLXKit
+        product: MLXKit
       - package: FluidAudio
         product: FluidAudio
+      - package: QwenASRKit
+        product: QwenASRKit
       - target: BroadcastUploadExtension
 
   BroadcastUploadExtension:
@@ -93,6 +109,44 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         MARKETING_VERSION: "1.0.0"
 
+  OfflineTranscriptionMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: OfflineTranscription
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.voiceping.transcribe.macos
+        PRODUCT_MODULE_NAME: OfflineTranscription
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: OfflineTranscription/OfflineTranscriptionMac.entitlements
+        GENERATE_INFOPLIST_FILE: "YES"
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: "1.0.0"
+        INFOPLIST_KEY_CFBundleDisplayName: "VoicePing Offline Transcribe"
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "This app needs microphone access to record and transcribe your speech."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "This app needs speech recognition access to transcribe audio using on-device Apple Speech."
+    dependencies:
+      - package: WhisperKit
+        product: WhisperKit
+      - package: swift-transformers
+        product: Hub
+      - package: swift-transformers
+        product: Tokenizers
+      - package: SherpaOnnxKit
+        product: SherpaOnnxKit
+      - package: CactusKit
+        product: CactusKit
+      - package: MLXKit
+        product: MLXKit
+      - package: FluidAudio
+        product: FluidAudio
+      - package: QwenASRKit
+        product: QwenASRKit
+      - package: Qwen3ASRSwift
+        product: Qwen3ASR
+
   OfflineTranscriptionTests:
     type: bundle.unit-test
     platform: iOS
@@ -105,6 +159,21 @@ targets:
         GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
       - target: OfflineTranscription
+      - package: WhisperKit
+        product: WhisperKit
+
+  OfflineTranscriptionMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: OfflineTranscriptionTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.voiceping.transcribe.macos-tests
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: "YES"
+    dependencies:
+      - target: OfflineTranscriptionMac
       - package: WhisperKit
         product: WhisperKit
 

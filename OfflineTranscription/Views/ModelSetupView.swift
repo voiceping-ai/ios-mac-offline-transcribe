@@ -20,10 +20,15 @@ struct ModelSetupView: View {
             }
             .accessibilityIdentifier("model_setup_view")
             .navigationTitle("Setup")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
         }
-        .onAppear {
-            viewModel = ModelManagementViewModel(whisperService: whisperService)
+        .task {
+            if viewModel == nil {
+                viewModel = ModelManagementViewModel(whisperService: whisperService)
+            }
+            await whisperService.refreshModelCatalog()
         }
     }
 
@@ -49,14 +54,14 @@ struct ModelSetupView: View {
     private var modelPickerSection: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                ForEach(ModelInfo.modelsByFamily, id: \.family) { group in
+                ForEach(whisperService.modelCardsByFamily, id: \.family) { group in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(group.family.displayName)
                             .font(.headline)
                             .foregroundStyle(.secondary)
 
-                        ForEach(group.models) { model in
-                            modelRow(model)
+                        ForEach(group.cards) { card in
+                            modelRow(card)
                         }
                     }
                 }
@@ -66,22 +71,45 @@ struct ModelSetupView: View {
     }
 
     @ViewBuilder
-    private func modelRow(_ model: ModelInfo) -> some View {
-        let isSelectedModel = whisperService.selectedModel.id == model.id
+    private func modelRow(_ card: ModelCard) -> some View {
+        let isSelectedCard = whisperService.selectedModelCardId == card.id
+        let availableBackends = whisperService.availableBackends(for: card)
+        let selectedBackend = isSelectedCard
+            ? whisperService.selectedInferenceBackend
+            : card.preferredBackend()
+        let resolvedModel = whisperService.resolvedModelInfo(
+            for: card,
+            requestedBackend: selectedBackend
+        )
+        let downloaded = resolvedModel.map { viewModel?.isModelDownloaded($0) ?? false } ?? false
 
         ModelPickerRow(
-            model: model,
-            isSelected: isSelectedModel,
-            isDownloaded: viewModel?.isModelDownloaded(model) ?? false,
-            isDownloading: whisperService.modelState == .downloading && isSelectedModel,
+            card: card,
+            isSelected: isSelectedCard,
+            selectedBackend: selectedBackend,
+            availableBackends: availableBackends,
+            effectiveBackend: isSelectedCard
+                ? whisperService.effectiveInferenceBackend
+                : selectedBackend,
+            effectiveRuntimeLabel: isSelectedCard
+                ? whisperService.effectiveRuntimeLabel
+                : whisperService.runtimeLabel(for: card, requestedBackend: selectedBackend),
+            fallbackWarning: isSelectedCard ? whisperService.backendFallbackWarning : nil,
+            isDownloaded: downloaded,
+            isDownloading: whisperService.modelState == .downloading && isSelectedCard,
             downloadProgress: whisperService.downloadProgress,
-            isLoading: whisperService.modelState == .loading && isSelectedModel
-        ) {
-            whisperService.selectedModel = model
-            Task {
-                await viewModel?.downloadAndSetup()
+            isLoading: whisperService.modelState == .loading && isSelectedCard,
+            onBackendChange: { backend in
+                whisperService.setSelectedModelCard(card.id)
+                whisperService.setSelectedInferenceBackend(backend)
+            },
+            onTap: {
+                whisperService.setSelectedModelCard(card.id)
+                Task {
+                    await viewModel?.downloadAndSetup()
+                }
             }
-        }
+        )
         .disabled(isBusy)
     }
 
@@ -93,6 +121,13 @@ struct ModelSetupView: View {
                     .font(.subheadline)
                     .foregroundStyle(.tertiary)
                     .accessibilityIdentifier("setup_prompt")
+            }
+
+            if let warning = whisperService.backendFallbackWarning {
+                Text(warning)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal)
             }
 
             if let error = whisperService.lastError {

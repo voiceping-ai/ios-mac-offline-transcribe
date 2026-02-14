@@ -59,12 +59,15 @@ module sherpa_onnx {
 }
 EOF
 
+  # onnxruntime requires per-slice headers when HeadersPath is present in Info.plist.
   mkdir -p "$ONNX_XC/$arch/Headers"
-  cat > "$ONNX_XC/$arch/Headers/module.modulemap" <<'EOF'
-module onnxruntime {
-    export *
-}
-EOF
+  cp "$ONNX_XC/Headers/"*.h "$ONNX_XC/$arch/Headers/"
+done
+
+ONNX_PLIST="$ONNX_XC/Info.plist"
+for index in 0 1; do
+  /usr/libexec/PlistBuddy -c "Add :AvailableLibraries:${index}:HeadersPath string Headers" "$ONNX_PLIST" 2>/dev/null || \
+    /usr/libexec/PlistBuddy -c "Set :AvailableLibraries:${index}:HeadersPath Headers" "$ONNX_PLIST"
 done
 
 PLIST="$SHERPA_XC/Info.plist"

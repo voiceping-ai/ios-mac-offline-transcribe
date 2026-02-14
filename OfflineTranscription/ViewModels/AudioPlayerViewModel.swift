@@ -11,7 +11,11 @@ final class AudioPlayerViewModel: NSObject {
     private(set) var waveformBars: [Float] = []
 
     private var player: AVAudioPlayer?
+    #if os(iOS)
     private var displayLink: CADisplayLink?
+    #else
+    private var displayTimer: Timer?
+    #endif
 
     let audioURL: URL
 
@@ -44,8 +48,10 @@ final class AudioPlayerViewModel: NSObject {
 
     func play() {
         guard let player else { return }
+        #if os(iOS)
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(true)
+        #endif
         player.play()
         isPlaying = true
         startDisplayLink()
@@ -107,15 +113,28 @@ final class AudioPlayerViewModel: NSObject {
     // MARK: - Display Link
 
     private func startDisplayLink() {
+        #if os(iOS)
         let link = CADisplayLink(target: self, selector: #selector(updateTime))
         link.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 20)
         link.add(to: .main, forMode: .common)
         displayLink = link
+        #else
+        displayTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 20.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateTime()
+            }
+        }
+        #endif
     }
 
     private func stopDisplayLink() {
+        #if os(iOS)
         displayLink?.invalidate()
         displayLink = nil
+        #else
+        displayTimer?.invalidate()
+        displayTimer = nil
+        #endif
     }
 
     @objc private func updateTime() {

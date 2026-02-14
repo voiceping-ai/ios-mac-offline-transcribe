@@ -8,10 +8,14 @@ final class ViewModelTests: XCTestCase {
     override func setUp() {
         super.setUp()
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
         super.tearDown()
     }
 
@@ -43,7 +47,7 @@ final class ViewModelTests: XCTestCase {
         XCTAssertFalse(vm.isReady)
         XCTAssertEqual(vm.downloadProgress, 0.0)
         XCTAssertNil(vm.errorMessage)
-        XCTAssertEqual(vm.selectedModel.id, "whisper-base")
+        XCTAssertEqual(vm.selectedModel.cardId ?? vm.selectedModel.id, "whisper-base")
     }
 
     // MARK: - Iteration 4

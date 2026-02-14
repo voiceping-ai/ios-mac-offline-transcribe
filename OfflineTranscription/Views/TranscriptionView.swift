@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 struct TranscriptionView: View {
     @Environment(WhisperService.self) private var whisperService
@@ -130,13 +133,24 @@ struct TranscriptionView: View {
 
             // Model info (always visible)
             if let vm = viewModel {
-                VStack(spacing: 2) {
+                VStack(spacing: 4) {
                     Text("\(vm.selectedModel.displayName) · \(vm.selectedModel.languages)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(vm.selectedModel.inferenceMethodLabel)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                    Text(whisperService.effectiveRuntimeLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color.accentColor.opacity(0.12))
+                        )
+                    if let warning = whisperService.backendFallbackWarning {
+                        Text(warning)
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
                 }
                 .padding(.vertical, 4)
                 .accessibilityIdentifier("model_info_label")
@@ -178,6 +192,7 @@ struct TranscriptionView: View {
                 .accessibilityIdentifier("file_transcribing_indicator")
             }
 
+            #if os(iOS)
             // Audio source selector
             if viewModel != nil, !(viewModel?.isRecording ?? false) {
                 @Bindable var service = whisperService
@@ -197,6 +212,7 @@ struct TranscriptionView: View {
                     .opacity(0.01)
                     .allowsHitTesting(false)
             }
+            #endif
 
             // Controls
             HStack(spacing: 32) {
@@ -240,7 +256,9 @@ struct TranscriptionView: View {
                 .padding(.bottom, 4)
         }
         .navigationTitle("Transcribe")
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
         .overlay(alignment: .topTrailing) {
             #if DEBUG
             if isAutoTestMode, !whisperService.e2eOverlayPayload.isEmpty {
@@ -269,7 +287,12 @@ struct TranscriptionView: View {
             ModelSettingsSheet(
                 fullText: viewModel?.fullText ?? "",
                 onCopyText: {
+                    #if os(macOS)
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(viewModel?.fullText ?? "", forType: .string)
+                    #else
                     UIPasteboard.general.string = viewModel?.fullText ?? ""
+                    #endif
                 },
                 onClearTranscription: {
                     viewModel?.clearTranscription()
@@ -440,6 +463,35 @@ struct ModelSettingsSheet: View {
                     Text("Inference: \(whisperService.selectedModel.inferenceMethodLabel)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                    Text("Requested backend: \(whisperService.selectedInferenceBackend.displayName)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Text("Effective backend: \(whisperService.effectiveInferenceBackend.displayName)")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    if let warning = whisperService.backendFallbackWarning {
+                        Text(warning)
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                if BackendFeatureFlags.isBackendSelectorEnabled,
+                   let selectedCard = whisperService.selectedCard(),
+                   whisperService.availableBackends(for: selectedCard).count > 1 {
+                    Section("Backend") {
+                        Picker(
+                            "Backend",
+                            selection: Binding(
+                                get: { whisperService.selectedInferenceBackend },
+                                set: { whisperService.setSelectedInferenceBackend($0) }
+                            )
+                        ) {
+                            ForEach(whisperService.availableBackends(for: selectedCard), id: \.self) { backend in
+                                Text(backend.displayName).tag(backend)
+                            }
+                        }
+                    }
                 }
 
                 if isSwitching {
@@ -478,13 +530,18 @@ struct ModelSettingsSheet: View {
                     }
                 }
 
-                ForEach(ModelInfo.modelsByFamily, id: \.family) { group in
+                ForEach(whisperService.modelCardsByFamily, id: \.family) { group in
                     Section(group.family.displayName) {
-                        ForEach(group.models) { model in
+                        ForEach(group.cards) { card in
                             Button {
                                 isSwitching = true
+                                whisperService.setSelectedModelCard(card.id)
+                                let supportedBackends = whisperService.availableBackends(for: card)
+                                if !supportedBackends.contains(whisperService.selectedInferenceBackend) {
+                                    whisperService.setSelectedInferenceBackend(card.preferredBackend())
+                                }
                                 Task {
-                                    await whisperService.switchModel(to: model)
+                                    await whisperService.setupModel()
                                     isSwitching = false
                                     if whisperService.modelState == .loaded {
                                         dismiss()
@@ -493,28 +550,31 @@ struct ModelSettingsSheet: View {
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading) {
-                                        Text(model.displayName)
-                                        Text(model.description)
+                                        Text(card.displayName)
+                                        Text(card.description)
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
-                                        Text("Inference: \(model.inferenceMethodLabel)")
+                                        let backend = card.id == whisperService.selectedModelCardId
+                                            ? whisperService.selectedInferenceBackend
+                                            : card.preferredBackend()
+                                        Text("Inference: \(whisperService.runtimeLabel(for: card, requestedBackend: backend))")
                                             .font(.caption2)
                                             .foregroundStyle(.tertiary)
                                     }
                                     Spacer()
                                     VStack(alignment: .trailing) {
-                                        Text(model.sizeOnDisk)
+                                        Text(card.sizeOnDisk)
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
-                                        Text(model.languages)
+                                        Text(card.languages)
                                             .font(.caption2)
                                             .foregroundStyle(.tertiary)
                                     }
                                 }
                             }
-                            .accessibilityIdentifier("model_row_\(model.id)")
+                            .accessibilityIdentifier("model_row_\(card.id)")
                             .disabled(
-                                model.id == whisperService.selectedModel.id
+                                card.id == whisperService.selectedModelCardId
                                 || isSwitching
                             )
                         }
@@ -535,13 +595,23 @@ struct ModelSettingsSheet: View {
                 }
             }
             .navigationTitle("Settings")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
+                #if os(iOS)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .accessibilityIdentifier("settings_done_button")
                         .disabled(isSwitching)
                 }
+                #else
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                        .accessibilityIdentifier("settings_done_button")
+                        .disabled(isSwitching)
+                }
+                #endif
             }
         }
     }

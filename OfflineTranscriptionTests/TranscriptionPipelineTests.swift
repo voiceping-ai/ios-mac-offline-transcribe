@@ -11,12 +11,16 @@ final class TranscriptionPipelineTests: XCTestCase {
     override func setUp() {
         super.setUp()
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
         service = WhisperService()
         service.enableEagerMode = true
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
         service = nil
         super.tearDown()
     }

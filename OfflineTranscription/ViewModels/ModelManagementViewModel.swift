@@ -8,7 +8,10 @@ final class ModelManagementViewModel {
 
     var selectedModel: ModelInfo {
         get { whisperService.selectedModel }
-        set { whisperService.selectedModel = newValue }
+        set {
+            whisperService.setSelectedModelCard(newValue.cardId ?? newValue.id)
+            whisperService.setSelectedInferenceBackend(newValue.backend ?? .legacy)
+        }
     }
 
     var isDownloading: Bool {

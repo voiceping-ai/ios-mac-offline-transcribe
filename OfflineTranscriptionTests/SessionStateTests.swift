@@ -8,10 +8,14 @@ final class SessionStateTests: XCTestCase {
     override func setUp() {
         super.setUp()
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
         super.tearDown()
     }
 

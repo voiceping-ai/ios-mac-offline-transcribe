@@ -66,11 +66,31 @@ final class AllModelsE2ETest: XCTestCase {
         // 3. Wait for main tab view or model info label (model loaded)
         let modelInfo = app.staticTexts.matching(identifier: "model_info_label").firstMatch
         let mainTab = app.otherElements.matching(identifier: "main_tab_view").firstMatch
-        let loaded = modelInfo.waitForExistence(timeout: timeoutSec)
-            || mainTab.waitForExistence(timeout: 5)
+        let loadStart = Date()
+        var loaded = false
+        var appBackgrounded = false
+
+        while Date().timeIntervalSince(loadStart) < timeoutSec {
+            allowPermissionAlertsIfNeeded(app: app)
+
+            if modelInfo.exists || mainTab.exists {
+                loaded = true
+                break
+            }
+
+            if isSpringboardForeground(app: app) {
+                appBackgrounded = true
+                NSLog("[E2E] [\(modelId)] App moved to SpringBoard while waiting for model load")
+                break
+            }
+
+            Thread.sleep(forTimeInterval: 1)
+        }
 
         if loaded {
             NSLog("[E2E] [\(modelId)] Model loaded — transcription screen visible")
+        } else if appBackgrounded {
+            NSLog("[E2E] [\(modelId)] Model load interrupted because app is no longer foreground")
         } else {
             NSLog("[E2E] [\(modelId)] Timeout waiting for model load")
         }
@@ -101,8 +121,13 @@ final class AllModelsE2ETest: XCTestCase {
         var previousFallbackTranscript: String?
         var fallbackStableCount = 0
 
-        while Date().timeIntervalSince(startWait) < overlayTimeout {
+        while !appBackgrounded, Date().timeIntervalSince(startWait) < overlayTimeout {
             allowPermissionAlertsIfNeeded(app: app)
+            if isSpringboardForeground(app: app) {
+                appBackgrounded = true
+                NSLog("[E2E] [\(modelId)] App moved to SpringBoard while waiting for inference result")
+                break
+            }
             // Check for result.json file (fast path)
             if FileManager.default.fileExists(atPath: resultPath) {
                 resultExists = true
@@ -227,11 +252,12 @@ final class AllModelsE2ETest: XCTestCase {
             }
         } else {
             // Write timeout result
+            let timeoutReason = appBackgrounded ? "app_backgrounded" : "timeout"
             let timeoutJson = """
-            {"model_id":"\(modelId)","pass":false,"error":"timeout"}
+            {"model_id":"\(modelId)","pass":false,"error":"\(timeoutReason)"}
             """
             try? timeoutJson.write(toFile: "\(evidenceDir)/result.json", atomically: true, encoding: .utf8)
-            XCTFail("[\(modelId)] Timed out waiting for transcription result")
+            XCTFail("[\(modelId)] Timed out waiting for transcription result (\(timeoutReason))")
         }
 
         NSLog("[E2E] [\(modelId)] E2E PASSED")
@@ -282,6 +308,12 @@ final class AllModelsE2ETest: XCTestCase {
         }
 
         return false
+    }
+
+    private func isSpringboardForeground(app: XCUIApplication) -> Bool {
+        guard app.state != .runningForeground else { return false }
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        return springboard.state == .runningForeground
     }
 
     private func saveScreenshot(_ screenshot: XCUIScreenshot, to dir: String, name: String) {

@@ -8,17 +8,21 @@ final class ModelLifecycleTests: XCTestCase {
     override func setUp() {
         super.setUp()
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
         super.tearDown()
     }
 
     // MARK: - Model Catalog
 
     func testModelCatalogCount() {
-        XCTAssertEqual(ModelInfo.availableModels.count, 11)
+        XCTAssertEqual(ModelInfo.availableModels.count, 15)
     }
 
     func testModelCatalogOrder() {
@@ -34,6 +38,10 @@ final class ModelLifecycleTests: XCTestCase {
         XCTAssertEqual(models[8].id, "zipformer-20m")
         XCTAssertEqual(models[9].id, "omnilingual-300m")
         XCTAssertEqual(models[10].id, "parakeet-tdt-v3")
+        XCTAssertEqual(models[11].id, "apple-speech")
+        XCTAssertEqual(models[12].id, "qwen3-asr-0.6b")
+        XCTAssertEqual(models[13].id, "qwen3-asr-0.6b-mlx")
+        XCTAssertEqual(models[14].id, "qwen3-asr-0.6b-onnx")
     }
 
     func testWhisperModelsHaveVariants() {
@@ -59,12 +67,12 @@ final class ModelLifecycleTests: XCTestCase {
 
     func testModelInfoIdentifiable() {
         let ids = ModelInfo.availableModels.map(\.id)
-        XCTAssertEqual(Set(ids).count, 11, "All model IDs should be unique")
+        XCTAssertEqual(Set(ids).count, ModelInfo.availableModels.count, "All model IDs should be unique")
     }
 
     func testModelInfoHashable() {
         let set = Set(ModelInfo.availableModels)
-        XCTAssertEqual(set.count, 11, "All models should be distinct in a Set")
+        XCTAssertEqual(set.count, ModelInfo.availableModels.count, "All models should be distinct in a Set")
     }
 
     func testDefaultModel() {
@@ -85,6 +93,10 @@ final class ModelLifecycleTests: XCTestCase {
         XCTAssertTrue(names.contains("Zipformer Streaming"))
         XCTAssertTrue(names.contains("Omnilingual 300M"))
         XCTAssertTrue(names.contains("Parakeet TDT 0.6B"))
+        XCTAssertTrue(names.contains("Apple Speech"))
+        XCTAssertTrue(names.contains("Qwen3 ASR 0.6B"))
+        XCTAssertTrue(names.contains("Qwen3 ASR 0.6B (MLX)"))
+        XCTAssertTrue(names.contains("Qwen3 ASR 0.6B (ONNX)"))
     }
 
     func testModelParameterCounts() {
@@ -94,8 +106,12 @@ final class ModelLifecycleTests: XCTestCase {
 
     func testModelSizeStrings() {
         for model in ModelInfo.availableModels {
-            XCTAssertTrue(model.sizeOnDisk.contains("MB") || model.sizeOnDisk.contains("GB"),
-                          "\(model.id) size should contain MB or GB")
+            XCTAssertTrue(
+                model.sizeOnDisk.contains("MB")
+                || model.sizeOnDisk.contains("GB")
+                || model.sizeOnDisk == "Built-in",
+                "\(model.id) size should contain MB/GB or Built-in"
+            )
         }
     }
 
@@ -108,7 +124,7 @@ final class ModelLifecycleTests: XCTestCase {
 
     func testModelFamilies() {
         let families = Set(ModelInfo.availableModels.map(\.family))
-        XCTAssertEqual(families, [.whisper, .moonshine, .senseVoice, .zipformer, .omnilingual, .parakeet])
+        XCTAssertEqual(families, [.whisper, .moonshine, .senseVoice, .zipformer, .omnilingual, .parakeet, .appleSpeech, .qwenASR])
     }
 
     func testModelEngineTypes() {
@@ -116,27 +132,26 @@ final class ModelLifecycleTests: XCTestCase {
         let offlineModels = ModelInfo.availableModels.filter { $0.engineType == .sherpaOnnxOffline }
         let streamingModels = ModelInfo.availableModels.filter { $0.engineType == .sherpaOnnxStreaming }
         let fluidAudioModels = ModelInfo.availableModels.filter { $0.engineType == .fluidAudio }
+        let appleSpeechModels = ModelInfo.availableModels.filter { $0.engineType == .appleSpeech }
+        let qwenModels = ModelInfo.availableModels.filter { $0.engineType == .qwenASR }
+        let mlxModels = ModelInfo.availableModels.filter { $0.engineType == .mlx }
+        let onnxModels = ModelInfo.availableModels.filter { $0.engineType == .qwenOnnx }
         XCTAssertEqual(whisperKitModels.count, 5)
         XCTAssertEqual(offlineModels.count, 4)
         XCTAssertEqual(streamingModels.count, 1)
         XCTAssertEqual(fluidAudioModels.count, 1)
+        XCTAssertEqual(appleSpeechModels.count, 1)
+        XCTAssertEqual(qwenModels.count, 1)
+        XCTAssertEqual(mlxModels.count, 1)
+        XCTAssertEqual(onnxModels.count, 1)
     }
 
     func testModelsByFamily() {
         let grouped = ModelInfo.modelsByFamily
-        XCTAssertEqual(grouped.count, 6)
-        XCTAssertEqual(grouped[0].family, .whisper)
-        XCTAssertEqual(grouped[0].models.count, 5)
-        XCTAssertEqual(grouped[1].family, .moonshine)
-        XCTAssertEqual(grouped[1].models.count, 2)
-        XCTAssertEqual(grouped[2].family, .senseVoice)
-        XCTAssertEqual(grouped[2].models.count, 1)
-        XCTAssertEqual(grouped[3].family, .zipformer)
-        XCTAssertEqual(grouped[3].models.count, 1)
-        XCTAssertEqual(grouped[4].family, .omnilingual)
-        XCTAssertEqual(grouped[4].models.count, 1)
-        XCTAssertEqual(grouped[5].family, .parakeet)
-        XCTAssertEqual(grouped[5].models.count, 1)
+        let expected = Dictionary(grouping: ModelInfo.supportedModels, by: \.family)
+            .mapValues(\.count)
+        let actual = Dictionary(uniqueKeysWithValues: grouped.map { ($0.family, $0.models.count) })
+        XCTAssertEqual(actual, expected)
     }
 
     func testLegacyModelIdLookup() {
@@ -158,7 +173,8 @@ final class ModelLifecycleTests: XCTestCase {
 
     func testDefaultModelSelection() {
         let s = WhisperService()
-        XCTAssertEqual(s.selectedModel.id, "whisper-base")
+        XCTAssertEqual(s.selectedModelCardId, "whisper-base")
+        XCTAssertEqual(s.selectedModel.cardId ?? s.selectedModel.id, "whisper-base")
     }
 
     func testModelSelectionChange() {

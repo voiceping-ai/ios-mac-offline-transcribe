@@ -20,6 +20,14 @@ final class FluidAudioEngine: ASREngine {
     /// Requires A13 Bionic or newer (second-gen Neural Engine).
     /// A12X and older crash during CoreML inference with fatalError.
     nonisolated static var isDeviceSupported: Bool {
+        #if os(macOS)
+        // macOS: supported on Apple Silicon (arm64) only
+        #if arch(arm64)
+        return true
+        #else
+        return false
+        #endif
+        #else
         var size = 0
         sysctlbyname("hw.machine", nil, &size, nil, 0)
         var machine = [CChar](repeating: 0, count: size)
@@ -55,6 +63,7 @@ final class FluidAudioEngine: ASREngine {
 
         // Simulator or unknown — allow (will fail gracefully via FluidAudio's own checks)
         return true
+        #endif
     }
 
     // MARK: - ASREngine

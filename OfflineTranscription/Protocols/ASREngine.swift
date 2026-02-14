@@ -49,7 +49,11 @@ enum ASREngineType: String, Codable, Sendable {
     case sherpaOnnxOffline
     case sherpaOnnxStreaming
     case fluidAudio
+    case cactus
+    case mlx
     case appleSpeech
+    case qwenASR
+    case qwenOnnx
 }
 
 // MARK: - Model Family
@@ -62,6 +66,7 @@ enum ModelFamily: String, Codable, Sendable, Hashable {
     case omnilingual
     case parakeet
     case appleSpeech
+    case qwenASR
 
     var displayName: String {
         switch self {
@@ -72,6 +77,7 @@ enum ModelFamily: String, Codable, Sendable, Hashable {
         case .omnilingual: "Omnilingual"
         case .parakeet: "Parakeet"
         case .appleSpeech: "Apple Speech"
+        case .qwenASR: "Qwen ASR"
         }
     }
 }

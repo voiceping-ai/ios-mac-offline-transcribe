@@ -9,7 +9,11 @@ enum EngineFactory {
         .sherpaOnnxOffline: { SherpaOnnxOfflineEngine() },
         .sherpaOnnxStreaming: { SherpaOnnxStreamingEngine() },
         .fluidAudio: { FluidAudioEngine() },
-        .appleSpeech: { AppleSpeechEngine() }
+        .cactus: { CactusEngine() },
+        .mlx: { MLXEngine() },
+        .appleSpeech: { AppleSpeechEngine() },
+        .qwenASR: { QwenASREngine() },
+        .qwenOnnx: { QwenOnnxEngine() }
     ]
 
     static func makeEngine(for model: ModelInfo) -> ASREngine {

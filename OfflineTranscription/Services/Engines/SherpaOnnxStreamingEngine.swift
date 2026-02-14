@@ -28,7 +28,7 @@ final class SherpaOnnxStreamingEngine: ASREngine {
     // MARK: - ASREngine
 
     func setupModel(_ model: ModelInfo) async throws {
-        guard let config = model.sherpaModelConfig else {
+        guard model.sherpaModelConfig != nil else {
             throw AppError.modelLoadFailed(underlying: NSError(
                 domain: "SherpaOnnxStreamingEngine", code: -1,
                 userInfo: [NSLocalizedDescriptionKey: "Missing sherpa model config"]

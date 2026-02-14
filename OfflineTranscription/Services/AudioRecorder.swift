@@ -32,9 +32,14 @@ final class AudioRecorder {
         guard !isRecording else { return }
 
         // Request microphone permission
+        #if os(macOS)
+        let granted = await AVCaptureDevice.requestAccess(for: .audio)
+        #else
         let granted = await AVAudioApplication.requestRecordPermission()
+        #endif
         guard granted else { throw AppError.microphonePermissionDenied }
 
+        #if os(iOS)
         let session = AVAudioSession.sharedInstance()
         switch captureMode {
         case .microphone:
@@ -51,6 +56,7 @@ final class AudioRecorder {
             return
         }
         try session.setActive(true)
+        #endif
 
         let engine = AVAudioEngine()
         let node = engine.inputNode

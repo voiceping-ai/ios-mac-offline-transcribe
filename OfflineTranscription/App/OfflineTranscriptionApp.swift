@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 @main
 struct OfflineTranscriptionApp: App {
@@ -8,6 +11,8 @@ struct OfflineTranscriptionApp: App {
         // Clear persisted state BEFORE WhisperService.init() reads UserDefaults
         if ProcessInfo.processInfo.arguments.contains("--reset-state") {
             UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+            UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+            UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
         }
         whisperService = WhisperService()
     }
@@ -16,7 +21,16 @@ struct OfflineTranscriptionApp: App {
         WindowGroup {
             RootView()
                 .environment(whisperService)
+                #if os(macOS)
+                .frame(minWidth: 500, minHeight: 600)
+                #endif
         }
+        #if os(macOS)
+        Settings {
+            Text("Preferences will be available in a future release.")
+                .padding()
+        }
+        #endif
     }
 }
 
@@ -27,6 +41,10 @@ struct RootView: View {
         let args = ProcessInfo.processInfo.arguments
         guard let idx = args.firstIndex(of: "--model-id"), idx + 1 < args.count else { return nil }
         return args[idx + 1]
+    }
+
+    private static var isAutoTestRun: Bool {
+        ProcessInfo.processInfo.arguments.contains("--auto-test")
     }
 
     var body: some View {
@@ -64,10 +82,13 @@ struct RootView: View {
         }
         .task {
             let resetState = ProcessInfo.processInfo.arguments.contains("--reset-state")
+            configureIdleTimerForUITests()
 
             // --reset-state: clear UserDefaults for clean UI test runs
             if resetState {
                 UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+                UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+                UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
             }
 
             // Auto-load only for E2E / UI testing (--model-id / --auto-test).
@@ -75,10 +96,17 @@ struct RootView: View {
             if let modelId = Self.autoTestModelId,
                let model = ModelInfo.availableModels.first(where: { $0.id == modelId }) {
                 await whisperService.switchModel(to: model)
-            } else if ProcessInfo.processInfo.arguments.contains("--auto-test") {
+            } else if Self.isAutoTestRun {
                 await whisperService.loadModelIfAvailable()
             }
         }
+    }
+
+    private func configureIdleTimerForUITests() {
+        #if os(iOS)
+        guard Self.isAutoTestRun else { return }
+        UIApplication.shared.isIdleTimerDisabled = true
+        #endif
     }
 }
 

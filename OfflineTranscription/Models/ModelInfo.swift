@@ -15,6 +15,46 @@ struct ModelInfo: Identifiable, Hashable {
 
     /// sherpa-onnx model config. Only for sherpa-onnx models.
     let sherpaModelConfig: SherpaModelConfig?
+    /// Qwen ASR model config. Only for Qwen ASR models.
+    let qwenModelConfig: QwenModelConfig?
+    /// Logical card ID used by the new backend-aware catalog.
+    let cardId: String?
+    /// Runtime variant ID from the backend-aware catalog.
+    let runtimeVariantId: String?
+    /// Requested backend from the backend-aware catalog.
+    let backend: InferenceBackend?
+
+    init(
+        id: String,
+        displayName: String,
+        parameterCount: String,
+        sizeOnDisk: String,
+        description: String,
+        family: ModelFamily,
+        engineType: ASREngineType,
+        languages: String,
+        variant: String?,
+        sherpaModelConfig: SherpaModelConfig?,
+        qwenModelConfig: QwenModelConfig? = nil,
+        cardId: String? = nil,
+        runtimeVariantId: String? = nil,
+        backend: InferenceBackend? = nil
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.parameterCount = parameterCount
+        self.sizeOnDisk = sizeOnDisk
+        self.description = description
+        self.family = family
+        self.engineType = engineType
+        self.languages = languages
+        self.variant = variant
+        self.sherpaModelConfig = sherpaModelConfig
+        self.qwenModelConfig = qwenModelConfig
+        self.cardId = cardId
+        self.runtimeVariantId = runtimeVariantId
+        self.backend = backend
+    }
 
     static let availableModels: [ModelInfo] = [
         // MARK: - Whisper (WhisperKit)
@@ -208,6 +248,64 @@ struct ModelInfo: Identifiable, Hashable {
             variant: nil,
             sherpaModelConfig: nil
         ),
+
+        // MARK: - Qwen ASR (pure C inference)
+        ModelInfo(
+            id: "qwen3-asr-0.6b",
+            displayName: "Qwen3 ASR 0.6B",
+            parameterCount: "600M",
+            sizeOnDisk: "~1.8 GB",
+            description: "30 languages. Pure C inference with NEON + Accelerate. ~2.7 GB RAM.",
+            family: .qwenASR,
+            engineType: .qwenASR,
+            languages: "30 languages",
+            variant: nil,
+            sherpaModelConfig: nil,
+            qwenModelConfig: QwenModelConfig(
+                repoId: "Qwen/Qwen3-ASR-0.6B",
+                files: ["config.json", "generation_config.json", "model.safetensors", "vocab.json", "merges.txt"]
+            )
+        ),
+
+        // MARK: - Qwen ASR (MLX, macOS only)
+        ModelInfo(
+            id: "qwen3-asr-0.6b-mlx",
+            displayName: "Qwen3 ASR 0.6B (MLX)",
+            parameterCount: "600M",
+            sizeOnDisk: "~1 GB (8-bit)",
+            description: "30 languages. MLX Metal GPU acceleration on Apple Silicon. 8-bit quantized.",
+            family: .qwenASR,
+            engineType: .mlx,
+            languages: "30 languages",
+            variant: nil,
+            sherpaModelConfig: nil
+        ),
+
+        // MARK: - Qwen ASR (ONNX Runtime, INT8)
+        ModelInfo(
+            id: "qwen3-asr-0.6b-onnx",
+            displayName: "Qwen3 ASR 0.6B (ONNX)",
+            parameterCount: "600M",
+            sizeOnDisk: "~1.6 GB (INT8)",
+            description: "30 languages. ONNX Runtime INT8 quantized. Cross-platform.",
+            family: .qwenASR,
+            engineType: .qwenOnnx,
+            languages: "30 languages",
+            variant: nil,
+            sherpaModelConfig: nil,
+            qwenModelConfig: QwenModelConfig(
+                repoId: "jima/qwen3-asr-0.6b-onnx-int8",
+                files: [
+                    "encoder.int8.onnx",
+                    "decoder_prefill.int8.onnx",
+                    "decoder_decode.int8.onnx",
+                    "embed_tokens.fp16.npy",
+                    "vocab.json",
+                    "config.json",
+                    "tokens.json"
+                ]
+            )
+        ),
     ]
 
     static let defaultModel = availableModels.first { $0.id == "whisper-base" }!
@@ -218,13 +316,18 @@ struct ModelInfo: Identifiable, Hashable {
         .zipformer,
         .omnilingual,
         .parakeet,
+        .qwenASR,
         .appleSpeech
     ]
     private static let cachedSupportedModels: [ModelInfo] = {
-        if FluidAudioEngine.isDeviceSupported {
-            return availableModels
+        var models = availableModels
+        if !FluidAudioEngine.isDeviceSupported {
+            models = models.filter { $0.engineType != .fluidAudio }
         }
-        return availableModels.filter { $0.engineType != .fluidAudio }
+        if !BackendCapabilities.isBackendSupported(.mlx) {
+            models = models.filter { $0.engineType != .mlx }
+        }
+        return models
     }()
     private static let cachedModelsByFamily: [(family: ModelFamily, models: [ModelInfo])] = {
         let grouped = Dictionary(grouping: cachedSupportedModels, by: \.family)
@@ -234,18 +337,80 @@ struct ModelInfo: Identifiable, Hashable {
         }
     }()
 
+    static var legacyModelCards: [ModelCard] {
+        supportedModels.map { model in
+            let legacyVariant = ModelRuntimeVariant(
+                id: "\(model.id)-legacy",
+                backend: .legacy,
+                engineType: model.engineType,
+                runtimeLabel: model.inferenceMethodLabel,
+                platforms: RuntimePlatform.allCases,
+                architectures: [],
+                minimumOSVersion: nil,
+                legacyModelId: model.id,
+                artifacts: [],
+                isEnabled: true
+            )
+            return ModelCard(
+                id: model.id,
+                displayName: model.displayName,
+                parameterCount: model.parameterCount,
+                sizeOnDisk: model.sizeOnDisk,
+                description: model.description,
+                family: model.family,
+                languages: model.languages,
+                runtimeVariants: [legacyVariant]
+            )
+        }
+    }
+
+    static func from(card: ModelCard, variant: ModelRuntimeVariant) -> ModelInfo {
+        if let legacyModelId = variant.legacyModelId,
+           let legacyModel = availableModels.first(where: { $0.id == legacyModelId }) {
+            return legacyModel.withCatalogContext(
+                cardId: card.id,
+                variantId: variant.id,
+                backend: variant.backend
+            )
+        }
+
+        return ModelInfo(
+            id: "\(card.id)-\(variant.backend.rawValue)",
+            displayName: card.displayName,
+            parameterCount: card.parameterCount,
+            sizeOnDisk: card.sizeOnDisk,
+            description: card.description,
+            family: card.family,
+            engineType: variant.engineType,
+            languages: card.languages,
+            variant: nil,
+            sherpaModelConfig: nil,
+            cardId: card.id,
+            runtimeVariantId: variant.id,
+            backend: variant.backend
+        )
+    }
+
     var inferenceMethodLabel: String {
         switch engineType {
         case .whisperKit:
-            return "CoreML (WhisperKit)"
+            return "WhisperKit · CoreML"
         case .sherpaOnnxOffline:
-            return "sherpa-onnx offline (ONNX Runtime)"
+            return "sherpa-onnx · ONNX Runtime"
         case .sherpaOnnxStreaming:
-            return "sherpa-onnx streaming (ONNX Runtime)"
+            return "sherpa-onnx · Streaming"
         case .fluidAudio:
-            return "CoreML (FluidAudio)"
+            return "FluidAudio · CoreML"
+        case .cactus:
+            return "Cactus · Optimized Runtime"
+        case .mlx:
+            return "MLX · Metal GPU"
         case .appleSpeech:
-            return "Apple Speech (SFSpeechRecognizer)"
+            return "Apple Speech · On-device"
+        case .qwenASR:
+            return "QwenASR · Pure C"
+        case .qwenOnnx:
+            return "QwenASR · ONNX Runtime"
         }
     }
 
@@ -265,6 +430,29 @@ struct ModelInfo: Identifiable, Hashable {
     /// Models grouped by family for UI display.
     static var modelsByFamily: [(family: ModelFamily, models: [ModelInfo])] {
         cachedModelsByFamily
+    }
+
+    func withCatalogContext(
+        cardId: String?,
+        variantId: String?,
+        backend: InferenceBackend?
+    ) -> ModelInfo {
+        ModelInfo(
+            id: id,
+            displayName: displayName,
+            parameterCount: parameterCount,
+            sizeOnDisk: sizeOnDisk,
+            description: description,
+            family: family,
+            engineType: engineType,
+            languages: languages,
+            variant: variant,
+            sherpaModelConfig: sherpaModelConfig,
+            qwenModelConfig: qwenModelConfig,
+            cardId: cardId,
+            runtimeVariantId: variantId,
+            backend: backend
+        )
     }
 }
 
@@ -316,5 +504,19 @@ struct SherpaModelConfig: Hashable, Sendable {
             if let m = omnilingualModel { files.append(m) }
         }
         return files
+    }
+}
+
+// MARK: - Qwen ASR Model Config
+
+struct QwenModelConfig: Hashable, Sendable {
+    /// HuggingFace repo ID (e.g. "Qwen/Qwen3-ASR-0.6B").
+    let repoId: String
+    /// Files to download from the repo.
+    let files: [String]
+
+    /// Local directory name derived from the repo ID.
+    var localDirName: String {
+        repoId.replacingOccurrences(of: "/", with: "_")
     }
 }

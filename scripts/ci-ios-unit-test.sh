@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# CI smoke test for iOS: run a minimal XCTest suite on the latest available iOS simulator.
+# CI unit test runner for iOS: run the OfflineTranscription unit-test target
+# on the latest available iOS simulator.
 
 set -euo pipefail
 
@@ -10,7 +11,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_FILE="$PROJECT_DIR/VoicePingIOSOfflineTranscribe.xcodeproj"
 SCHEME="OfflineTranscription"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PROJECT_DIR/build/DerivedData}"
-TEST_FILTER="${IOS_TEST_FILTER:-OfflineTranscriptionTests/SessionStateTests}"
+TEST_FILTER="${IOS_TEST_FILTER:-OfflineTranscriptionTests}"
 
 resolve_simulator_udid() {
   python3 - <<'PY'
@@ -61,11 +62,19 @@ else
 fi
 
 set -o pipefail
-xcodebuild test \
-  -project "$PROJECT_FILE" \
-  -scheme "$SCHEME" \
-  -destination "$DESTINATION" \
-  -configuration Debug \
-  -derivedDataPath "$DERIVED_DATA_PATH" \
-  CODE_SIGNING_ALLOWED=NO \
-  -only-testing:"$TEST_FILTER"
+
+XCODEBUILD_ARGS=(
+  test
+  -project "$PROJECT_FILE"
+  -scheme "$SCHEME"
+  -destination "$DESTINATION"
+  -configuration Debug
+  -derivedDataPath "$DERIVED_DATA_PATH"
+  CODE_SIGNING_ALLOWED=NO
+)
+
+if [ -n "${TEST_FILTER:-}" ]; then
+  XCODEBUILD_ARGS+=("-only-testing:$TEST_FILTER")
+fi
+
+xcodebuild "${XCODEBUILD_ARGS[@]}"

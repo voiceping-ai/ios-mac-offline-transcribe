@@ -1,7 +1,7 @@
 import Foundation
 import WhisperKit
 import Observation
-import AVFoundation
+@preconcurrency import AVFoundation
 
 /// Session lifecycle states for the recording/transcription pipeline.
 enum SessionState: String, Equatable, Sendable {
@@ -73,6 +73,13 @@ final class WhisperService {
 
     // Configuration
     var selectedModel: ModelInfo = ModelInfo.defaultModel
+    private(set) var modelCards: [ModelCard] = ModelInfo.legacyModelCards
+    private(set) var modelCatalogSource: ModelCatalogSource = .legacy
+    private(set) var selectedModelCardId: String = ModelInfo.defaultModel.id
+    private(set) var selectedInferenceBackend: InferenceBackend = .automatic
+    private(set) var effectiveInferenceBackend: InferenceBackend = .legacy
+    private(set) var backendFallbackWarning: String?
+    private(set) var effectiveRuntimeLabel: String = ModelInfo.defaultModel.inferenceMethodLabel
     var audioCaptureMode: AudioCaptureMode = .microphone
     var useVAD: Bool = true
     var silenceThreshold: Float = 0.0015
@@ -152,6 +159,8 @@ final class WhisperService {
     private var lastTranslationInput: (confirmed: String, hypothesis: String)?
     private var lastUIMeterUpdateTimestamp: CFAbsoluteTime = 0
     private let translationService = AppleTranslationService()
+    private let catalogService = ModelCatalogService.shared
+    private let backendResolver = BackendResolver.shared
 
     /// Called from TranslationBridgeView when a TranslationSession becomes available/unavailable.
     func setTranslationSession(_ session: Any?) {
@@ -180,6 +189,8 @@ final class WhisperService {
         try? appDiagLines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
     private let selectedModelKey = "selectedModelVariant"
+    private let selectedCardKey = "selectedModelCardId"
+    private let selectedBackendKey = "selectedInferenceBackend"
     private static let sampleRate: Float = 16000
     private static let displayEnergyFrameLimit = 160
     private static let uiMeterUpdateInterval: CFTimeInterval = 0.12
@@ -266,16 +277,40 @@ final class WhisperService {
     }
 
     init() {
-        if let saved = UserDefaults.standard.string(forKey: selectedModelKey),
-           let model = ModelInfo.supportedModels.first(where: { $0.variant == saved })
-                    ?? ModelInfo.supportedModels.first(where: { $0.id == saved })
-                    ?? ModelInfo.findByLegacyId(saved) {
-            self.selectedModel = model
+        let localCatalog = catalogService.loadLocalFallbackCatalog()
+        self.modelCards = localCatalog.cards
+        self.modelCatalogSource = localCatalog.source
+
+        let defaults = UserDefaults.standard
+        if let backendRaw = defaults.string(forKey: selectedBackendKey),
+           let savedBackend = InferenceBackend(rawValue: backendRaw) {
+            self.selectedInferenceBackend = savedBackend
         }
+
+        if let savedCardId = defaults.string(forKey: selectedCardKey),
+           modelCards.contains(where: { $0.id == savedCardId }) {
+            self.selectedModelCardId = savedCardId
+        } else if let migrated = migrateLegacySelection(from: defaults.string(forKey: selectedModelKey)) {
+            self.selectedModelCardId = migrated.cardId
+            self.selectedInferenceBackend = migrated.backend
+        } else if let defaultCardId = preferredDefaultCardId(in: modelCards) {
+            self.selectedModelCardId = defaultCardId
+        }
+
+        applyBackendResolution(
+            cardId: selectedModelCardId,
+            requestedBackend: selectedInferenceBackend
+        )
+
         migrateLegacyModelFolder()
+        #if os(iOS)
         setupAudioObservers()
         registerBroadcastNotifications()
+        #endif
         startMetricsSampling()
+        Task { [weak self] in
+            await self?.refreshModelCatalog()
+        }
     }
 
     deinit {
@@ -296,6 +331,7 @@ final class WhisperService {
         }
     }
 
+    #if os(iOS)
     // MARK: - Broadcast Notifications (ReplayKit IPC)
 
     private func registerBroadcastNotifications() {
@@ -455,6 +491,7 @@ final class WhisperService {
             break
         }
     }
+    #endif
 
     // MARK: - Model Management
 
@@ -477,9 +514,159 @@ final class WhisperService {
         UserDefaults.standard.removeObject(forKey: legacyKey)
     }
 
+    private func migrateLegacySelection(from savedValue: String?) -> (cardId: String, backend: InferenceBackend)? {
+        guard let savedValue else { return nil }
+
+        guard let model = ModelInfo.supportedModels.first(where: { $0.variant == savedValue })
+            ?? ModelInfo.supportedModels.first(where: { $0.id == savedValue })
+            ?? ModelInfo.findByLegacyId(savedValue) else {
+            return nil
+        }
+
+        let migratedCardId = model.cardId ?? model.id
+        UserDefaults.standard.set(migratedCardId, forKey: selectedCardKey)
+        UserDefaults.standard.set(InferenceBackend.legacy.rawValue, forKey: selectedBackendKey)
+        return (cardId: migratedCardId, backend: .legacy)
+    }
+
+    private func preferredDefaultCardId(in cards: [ModelCard]) -> String? {
+        let defaultCardId = ModelInfo.defaultModel.cardId ?? ModelInfo.defaultModel.id
+        if cards.contains(where: { $0.id == defaultCardId }) {
+            return defaultCardId
+        }
+        return cards.first?.id
+    }
+
+    private func persistSelectionKeys() {
+        UserDefaults.standard.set(selectedModelCardId, forKey: selectedCardKey)
+        UserDefaults.standard.set(selectedInferenceBackend.rawValue, forKey: selectedBackendKey)
+    }
+
+    func refreshModelCatalog() async {
+        let catalog = await catalogService.loadCatalog()
+        modelCards = catalog.cards
+        modelCatalogSource = catalog.source
+
+        if !modelCards.contains(where: { $0.id == selectedModelCardId }),
+           let defaultCardId = preferredDefaultCardId(in: modelCards) {
+            selectedModelCardId = defaultCardId
+        }
+
+        applyBackendResolution(
+            cardId: selectedModelCardId,
+            requestedBackend: selectedInferenceBackend
+        )
+        persistSelectionKeys()
+    }
+
+    var modelCardsByFamily: [(family: ModelFamily, cards: [ModelCard])] {
+        let grouped = Dictionary(grouping: modelCards, by: \.family)
+        let familyOrder: [ModelFamily] = [
+            .senseVoice,
+            .whisper,
+            .moonshine,
+            .zipformer,
+            .omnilingual,
+            .parakeet,
+            .qwenASR,
+            .appleSpeech
+        ]
+        return familyOrder.compactMap { family in
+            guard let cards = grouped[family], !cards.isEmpty else { return nil }
+            return (family: family, cards: cards)
+        }
+    }
+
+    func selectedCard() -> ModelCard? {
+        modelCards.first(where: { $0.id == selectedModelCardId })
+    }
+
+    func availableBackends(for card: ModelCard) -> [InferenceBackend] {
+        let concreteBackends = card.runtimeVariants
+            .map(\.backend)
+            .reduce(into: [InferenceBackend]()) { acc, backend in
+                if !acc.contains(backend) {
+                    acc.append(backend)
+                }
+            }
+            .sorted(by: { $0.rawValue < $1.rawValue })
+
+        if concreteBackends.count <= 1 {
+            return concreteBackends
+        }
+
+        return [.automatic] + concreteBackends
+    }
+
+    func resolvedModelInfo(
+        for card: ModelCard,
+        requestedBackend: InferenceBackend
+    ) -> ModelInfo? {
+        let resolution = backendResolver.resolve(card: card, requestedBackend: requestedBackend)
+        guard let variant = resolution.runtimeVariant else { return nil }
+        return ModelInfo.from(card: card, variant: variant)
+    }
+
+    func runtimeLabel(for card: ModelCard, requestedBackend: InferenceBackend) -> String {
+        let resolution = backendResolver.resolve(card: card, requestedBackend: requestedBackend)
+        return resolution.runtimeVariant?.runtimeLabel ?? "Unavailable"
+    }
+
+    func setSelectedModelCard(_ cardId: String) {
+        selectedModelCardId = cardId
+        applyBackendResolution(
+            cardId: cardId,
+            requestedBackend: selectedInferenceBackend
+        )
+        persistSelectionKeys()
+    }
+
+    func setSelectedInferenceBackend(_ backend: InferenceBackend) {
+        selectedInferenceBackend = backend
+        applyBackendResolution(
+            cardId: selectedModelCardId,
+            requestedBackend: backend
+        )
+        persistSelectionKeys()
+    }
+
+    private func applyBackendResolution(
+        cardId: String,
+        requestedBackend: InferenceBackend
+    ) {
+        guard let card = modelCards.first(where: { $0.id == cardId }) else {
+            selectedModel = ModelInfo.defaultModel
+            effectiveInferenceBackend = .legacy
+            effectiveRuntimeLabel = selectedModel.inferenceMethodLabel
+            backendFallbackWarning = nil
+            return
+        }
+
+        let resolution = backendResolver.resolve(
+            card: card,
+            requestedBackend: requestedBackend
+        )
+
+        backendFallbackWarning = resolution.fallbackReason
+        effectiveInferenceBackend = resolution.effectiveBackend
+
+        guard let variant = resolution.runtimeVariant else {
+            selectedModel = ModelInfo.defaultModel
+            effectiveRuntimeLabel = selectedModel.inferenceMethodLabel
+            return
+        }
+
+        selectedModel = ModelInfo.from(card: card, variant: variant)
+        effectiveRuntimeLabel = variant.runtimeLabel
+    }
+
     func loadModelIfAvailable() async {
         // Don't overwrite an already-loaded or in-progress engine
         guard activeEngine == nil, modelState == .unloaded else { return }
+        applyBackendResolution(
+            cardId: selectedModelCardId,
+            requestedBackend: selectedInferenceBackend
+        )
 
         let engine = EngineFactory.makeEngine(for: selectedModel)
 
@@ -517,6 +704,10 @@ final class WhisperService {
 
     func setupModel() async {
         let logger = InferenceLogger.shared
+        applyBackendResolution(
+            cardId: selectedModelCardId,
+            requestedBackend: selectedInferenceBackend
+        )
         logger.log("[WhisperService] setupModel: model=\(selectedModel.id) engine=\(selectedModel.engineType)")
         let engine = EngineFactory.makeEngine(for: selectedModel)
         activeEngine = engine
@@ -559,6 +750,7 @@ final class WhisperService {
             } else {
                 UserDefaults.standard.set(selectedModel.id, forKey: selectedModelKey)
             }
+            persistSelectionKeys()
         } catch {
             progressTask.cancel()
             logger.log("[WhisperService] setupModel FAILED: \(error) model=\(selectedModel.id)")
@@ -593,6 +785,9 @@ final class WhisperService {
         case .fluidAudio:
             // FluidAudio manages its own model cache
             return false
+        case .cactus, .mlx, .qwenASR, .qwenOnnx:
+            let engine = EngineFactory.makeEngine(for: model)
+            return engine.isModelDownloaded(model)
         case .appleSpeech:
             // Apple Speech is built into iOS — always available
             return true
@@ -621,7 +816,13 @@ final class WhisperService {
         activeEngine = nil
         whisperKit = nil
         modelState = .unloaded
-        selectedModel = model
+        selectedModelCardId = model.cardId ?? model.id
+        selectedInferenceBackend = model.backend ?? .legacy
+        applyBackendResolution(
+            cardId: selectedModelCardId,
+            requestedBackend: selectedInferenceBackend
+        )
+        persistSelectionKeys()
         await setupModel()
     }
 
@@ -640,6 +841,7 @@ final class WhisperService {
 
         resetTranscriptionState()
 
+        #if os(iOS)
         if audioCaptureMode == .systemBroadcast {
             // Use SystemAudioSource instead of engine's AudioRecorder
             let source = SystemAudioSource()
@@ -669,6 +871,22 @@ final class WhisperService {
                 throw error
             }
         }
+        #else
+        systemAudioSource = nil
+        do {
+            try await engine.startRecording(captureMode: audioCaptureMode)
+        } catch {
+            isRecording = false
+            isTranscribing = false
+            sessionState = .idle
+            if let appError = error as? AppError {
+                lastError = appError
+            } else {
+                lastError = .audioSessionSetupFailed(underlying: error)
+            }
+            throw error
+        }
+        #endif
 
         isRecording = true
         isTranscribing = true
@@ -693,6 +911,7 @@ final class WhisperService {
         translationTask?.cancel()
         translationTask = nil
 
+        #if os(iOS)
         // Signal broadcast extension to stop BEFORE releasing the ring buffer.
         // Uses shared memory flag (checked every 200ms via timer in SampleHandler)
         // plus Darwin notification as backup.
@@ -716,6 +935,7 @@ final class WhisperService {
             NSLog("[WhisperService] Skipping broadcast stop signal — mode=%@, broadcastActive=%d",
                   String(describing: audioCaptureMode), isBroadcastActive ? 1 : 0)
         }
+        #endif
 
         systemAudioSource?.stop()
         systemAudioSource = nil

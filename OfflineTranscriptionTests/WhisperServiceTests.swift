@@ -8,10 +8,14 @@ final class WhisperServiceTests: XCTestCase {
     override func setUp() {
         super.setUp()
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
     }
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: "selectedModelVariant")
+        UserDefaults.standard.removeObject(forKey: "selectedModelCardId")
+        UserDefaults.standard.removeObject(forKey: "selectedInferenceBackend")
         super.tearDown()
     }
 
@@ -40,15 +44,16 @@ final class WhisperServiceTests: XCTestCase {
     // MARK: - Iteration 2
     func testDefaultModelSelection() {
         let s = WhisperService()
-        XCTAssertEqual(s.selectedModel.id, "whisper-base")
+        XCTAssertEqual(s.selectedModelCardId, "whisper-base")
+        XCTAssertEqual(s.selectedModel.cardId ?? s.selectedModel.id, "whisper-base")
         XCTAssertEqual(s.selectedModel.displayName, "Whisper Base")
-        XCTAssertEqual(s.selectedModel.variant, "openai_whisper-base")
+        XCTAssertEqual(s.selectedModel.family, .whisper)
     }
 
     // MARK: - Iteration 3
     func testModelInfoCatalog() {
         let models = ModelInfo.availableModels
-        XCTAssertEqual(models.count, 12)
+        XCTAssertEqual(models.count, 15)
         XCTAssertEqual(models[0].id, "whisper-tiny")
         XCTAssertEqual(models[1].id, "whisper-base")
         XCTAssertEqual(models[2].id, "whisper-small")
@@ -61,6 +66,9 @@ final class WhisperServiceTests: XCTestCase {
         XCTAssertEqual(models[9].id, "omnilingual-300m")
         XCTAssertEqual(models[10].id, "parakeet-tdt-v3")
         XCTAssertEqual(models[11].id, "apple-speech")
+        XCTAssertEqual(models[12].id, "qwen3-asr-0.6b")
+        XCTAssertEqual(models[13].id, "qwen3-asr-0.6b-mlx")
+        XCTAssertEqual(models[14].id, "qwen3-asr-0.6b-onnx")
         XCTAssertEqual(ModelInfo.defaultModel.id, "whisper-base")
     }
 
@@ -169,6 +177,12 @@ final class WhisperServiceTests: XCTestCase {
         let parakeetModels = ModelInfo.availableModels.filter { $0.family == .parakeet }
         XCTAssertEqual(parakeetModels.count, 1)
         XCTAssertTrue(parakeetModels.allSatisfy { $0.engineType == .fluidAudio })
+
+        let qwenModels = ModelInfo.availableModels.filter { $0.family == .qwenASR }
+        XCTAssertEqual(qwenModels.count, 3)
+        XCTAssertTrue(qwenModels.contains { $0.engineType == .qwenASR })
+        XCTAssertTrue(qwenModels.contains { $0.engineType == .mlx })
+        XCTAssertTrue(qwenModels.contains { $0.engineType == .qwenOnnx })
     }
 
     func testLegacyModelIdLookup() {
@@ -181,13 +195,11 @@ final class WhisperServiceTests: XCTestCase {
 
     func testModelsByFamily() {
         let groups = ModelInfo.modelsByFamily
-        XCTAssertEqual(groups.count, 7)
-        XCTAssertEqual(groups[0].family, .whisper)
-        XCTAssertEqual(groups[1].family, .moonshine)
-        XCTAssertEqual(groups[2].family, .senseVoice)
-        XCTAssertEqual(groups[3].family, .zipformer)
-        XCTAssertEqual(groups[4].family, .omnilingual)
-        XCTAssertEqual(groups[5].family, .parakeet)
-        XCTAssertEqual(groups[6].family, .appleSpeech)
+        XCTAssertEqual(groups.count, 8)
+        let families = Set(groups.map(\.family))
+        XCTAssertEqual(
+            families,
+            [.whisper, .moonshine, .senseVoice, .zipformer, .omnilingual, .parakeet, .appleSpeech, .qwenASR]
+        )
     }
 }

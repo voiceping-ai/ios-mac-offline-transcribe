@@ -33,31 +33,59 @@ final class ModelDownloader: NSObject, @unchecked Sendable {
 
     /// Check if all required model files are already downloaded.
     func isModelDownloaded(_ model: ModelInfo) -> Bool {
-        guard let config = model.sherpaModelConfig else { return false }
-        let modelDir = Self.modelsDirectory.appendingPathComponent(config.repoName)
-        return config.allFiles.allSatisfy { file in
-            Self.fileManager.fileExists(atPath: modelDir.appendingPathComponent(file).path)
+        if let config = model.sherpaModelConfig {
+            let modelDir = Self.modelsDirectory.appendingPathComponent(config.repoName)
+            return config.allFiles.allSatisfy { file in
+                Self.fileManager.fileExists(atPath: modelDir.appendingPathComponent(file).path)
+            }
         }
+        if let config = model.qwenModelConfig {
+            let modelDir = Self.modelsDirectory.appendingPathComponent(config.localDirName)
+            return config.files.allSatisfy { file in
+                Self.fileManager.fileExists(atPath: modelDir.appendingPathComponent(file).path)
+            }
+        }
+        return false
     }
 
     /// Get the local directory path for a downloaded model.
     func modelDirectory(for model: ModelInfo) -> URL? {
-        guard let config = model.sherpaModelConfig else { return nil }
-        let dir = Self.modelsDirectory.appendingPathComponent(config.repoName)
+        let dirName: String
+        if let config = model.sherpaModelConfig {
+            dirName = config.repoName
+        } else if let config = model.qwenModelConfig {
+            dirName = config.localDirName
+        } else {
+            return nil
+        }
+        let dir = Self.modelsDirectory.appendingPathComponent(dirName)
         guard Self.fileManager.fileExists(atPath: dir.path) else { return nil }
         return dir
     }
 
     /// Download all model files individually from HuggingFace. Returns the local model directory.
     func downloadModel(_ model: ModelInfo) async throws -> URL {
-        guard let config = model.sherpaModelConfig else {
+        // Determine repo, directory name, and file list
+        let repoPath: String
+        let localDirName: String
+        let allFiles: [String]
+
+        if let config = model.sherpaModelConfig {
+            repoPath = config.repoName.contains("/") ? config.repoName : "\(Self.defaultHuggingFaceOrg)/\(config.repoName)"
+            localDirName = config.repoName
+            allFiles = config.allFiles
+        } else if let config = model.qwenModelConfig {
+            repoPath = config.repoId
+            localDirName = config.localDirName
+            allFiles = config.files
+        } else {
             throw AppError.modelDownloadFailed(underlying: NSError(
                 domain: "ModelDownloader", code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "No sherpa model config for \(model.id)"]
+                userInfo: [NSLocalizedDescriptionKey: "No model config for \(model.id)"]
             ))
         }
 
-        let modelDir = Self.modelsDirectory.appendingPathComponent(config.repoName)
+        let modelDir = Self.modelsDirectory.appendingPathComponent(localDirName)
         progress = 0
 
         if isModelDownloaded(model) {
@@ -69,7 +97,7 @@ final class ModelDownloader: NSObject, @unchecked Sendable {
         try Self.fileManager.createDirectory(at: modelDir, withIntermediateDirectories: true)
 
         // Determine which files still need downloading
-        let filesToDownload = config.allFiles.filter { filename in
+        let filesToDownload = allFiles.filter { filename in
             !Self.fileManager.fileExists(atPath: modelDir.appendingPathComponent(filename).path)
         }
 
@@ -80,7 +108,7 @@ final class ModelDownloader: NSObject, @unchecked Sendable {
         for (index, filename) in filesToDownload.enumerated() {
             currentFileIndex = index
 
-            let url = Self.fileURL(repo: config.repoName, filename: filename)
+            let url = URL(string: "https://huggingface.co/\(repoPath)/resolve/main/\(filename)")!
             let tempFile = try await downloadFile(from: url)
 
             let destPath = modelDir.appendingPathComponent(filename)
@@ -102,8 +130,15 @@ final class ModelDownloader: NSObject, @unchecked Sendable {
 
     /// Delete a downloaded model.
     func deleteModel(_ model: ModelInfo) throws {
-        guard let config = model.sherpaModelConfig else { return }
-        let modelDir = Self.modelsDirectory.appendingPathComponent(config.repoName)
+        let dirName: String
+        if let config = model.sherpaModelConfig {
+            dirName = config.repoName
+        } else if let config = model.qwenModelConfig {
+            dirName = config.localDirName
+        } else {
+            return
+        }
+        let modelDir = Self.modelsDirectory.appendingPathComponent(dirName)
         if Self.fileManager.fileExists(atPath: modelDir.path) {
             try Self.fileManager.removeItem(at: modelDir)
         }

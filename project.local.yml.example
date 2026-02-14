@@ -14,6 +14,18 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.voiceping.transcribe-tests
         DEVELOPMENT_TEAM: ABCDE12345
 
+  OfflineTranscriptionMac:
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.voiceping.transcribe.macos
+        DEVELOPMENT_TEAM: ABCDE12345
+
+  OfflineTranscriptionMacTests:
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.voiceping.transcribe.macos-tests
+        DEVELOPMENT_TEAM: ABCDE12345
+
   OfflineTranscriptionUITests:
     settings:
       base:

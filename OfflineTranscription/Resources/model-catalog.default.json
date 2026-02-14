@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "cards": [
+    {
+      "id": "whisper-tiny",
+      "displayName": "Whisper Tiny",
+      "parameterCount": "39M",
+      "sizeOnDisk": "~80 MB",
+      "description": "Fastest, lower accuracy. Good for quick notes.",
+      "family": "whisper",
+      "languages": "99 languages",
+      "runtimeVariants": [
+        {
+          "id": "whisper-tiny-legacy",
+          "backend": "legacy",
+          "engineType": "whisperKit",
+          "runtimeLabel": "WhisperKit · CoreML",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "whisper-tiny",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "whisper-base",
+      "displayName": "Whisper Base",
+      "parameterCount": "74M",
+      "sizeOnDisk": "~150 MB",
+      "description": "Balanced speed and accuracy. Recommended.",
+      "family": "whisper",
+      "languages": "English",
+      "runtimeVariants": [
+        {
+          "id": "whisper-base-legacy",
+          "backend": "legacy",
+          "engineType": "whisperKit",
+          "runtimeLabel": "WhisperKit · CoreML",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "whisper-base",
+          "artifacts": [],
+          "isEnabled": true
+        },
+        {
+          "id": "whisper-base-cactus-v1",
+          "backend": "cactus",
+          "engineType": "cactus",
+          "runtimeLabel": "Cactus · Optimized Runtime",
+          "platforms": ["ios", "catalyst"],
+          "architectures": ["arm64"],
+          "minimumOSVersion": "17.0",
+          "legacyModelId": null,
+          "artifacts": [
+            {
+              "id": "model-bin",
+              "relativePath": "model.bin",
+              "url": "https://example.com/models/whisper-base/cactus/v1/model.bin",
+              "checksum": "0000000000000000000000000000000000000000000000000000000000000000",
+              "checksumAlgorithm": "sha256",
+              "sizeBytes": 0
+            }
+          ],
+          "isEnabled": true
+        },
+        {
+          "id": "whisper-base-mlx-v1",
+          "backend": "mlx",
+          "engineType": "mlx",
+          "runtimeLabel": "MLX · Metal GPU",
+          "platforms": ["macOS", "catalyst"],
+          "architectures": ["arm64"],
+          "minimumOSVersion": "14.0",
+          "legacyModelId": null,
+          "artifacts": [
+            {
+              "id": "model-weights",
+              "relativePath": "weights.safetensors",
+              "url": "https://example.com/models/whisper-base/mlx/v1/weights.safetensors",
+              "checksum": "0000000000000000000000000000000000000000000000000000000000000000",
+              "checksumAlgorithm": "sha256",
+              "sizeBytes": 0
+            }
+          ],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "whisper-small",
+      "displayName": "Whisper Small",
+      "parameterCount": "244M",
+      "sizeOnDisk": "~500 MB",
+      "description": "Higher accuracy, slower. Best for important recordings.",
+      "family": "whisper",
+      "languages": "99 languages",
+      "runtimeVariants": [
+        {
+          "id": "whisper-small-legacy",
+          "backend": "legacy",
+          "engineType": "whisperKit",
+          "runtimeLabel": "WhisperKit · CoreML",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "whisper-small",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "displayName": "Whisper Large V3 Turbo",
+      "parameterCount": "809M",
+      "sizeOnDisk": "~600 MB",
+      "description": "Near-SOTA accuracy (7.75% WER). Best quality, larger download.",
+      "family": "whisper",
+      "languages": "99 languages",
+      "runtimeVariants": [
+        {
+          "id": "whisper-large-v3-turbo-legacy",
+          "backend": "legacy",
+          "engineType": "whisperKit",
+          "runtimeLabel": "WhisperKit · CoreML",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "whisper-large-v3-turbo",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "whisper-large-v3-turbo-compressed",
+      "displayName": "Whisper Large V3 Turbo (Compressed)",
+      "parameterCount": "809M",
+      "sizeOnDisk": "~1 GB",
+      "description": "Compressed Turbo. Slightly lower quality, smaller download.",
+      "family": "whisper",
+      "languages": "99 languages",
+      "runtimeVariants": [
+        {
+          "id": "whisper-large-v3-turbo-compressed-legacy",
+          "backend": "legacy",
+          "engineType": "whisperKit",
+          "runtimeLabel": "WhisperKit · CoreML",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "whisper-large-v3-turbo-compressed",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "moonshine-tiny",
+      "displayName": "Moonshine Tiny",
+      "parameterCount": "27M",
+      "sizeOnDisk": "~125 MB",
+      "description": "Ultra-fast English. Beats Whisper Tiny at 30% fewer params.",
+      "family": "moonshine",
+      "languages": "English",
+      "runtimeVariants": [
+        {
+          "id": "moonshine-tiny-legacy",
+          "backend": "legacy",
+          "engineType": "sherpaOnnxOffline",
+          "runtimeLabel": "sherpa-onnx · ONNX Runtime",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "moonshine-tiny",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "moonshine-base",
+      "displayName": "Moonshine Base",
+      "parameterCount": "61M",
+      "sizeOnDisk": "~280 MB",
+      "description": "Fast English with higher accuracy than Tiny.",
+      "family": "moonshine",
+      "languages": "English",
+      "runtimeVariants": [
+        {
+          "id": "moonshine-base-legacy",
+          "backend": "legacy",
+          "engineType": "sherpaOnnxOffline",
+          "runtimeLabel": "sherpa-onnx · ONNX Runtime",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "moonshine-base",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "sensevoice-small",
+      "displayName": "SenseVoice Small",
+      "parameterCount": "234M",
+      "sizeOnDisk": "~240 MB",
+      "description": "5x faster than Whisper. Chinese, English, Japanese, Korean, Cantonese.",
+      "family": "senseVoice",
+      "languages": "zh/en/ja/ko/yue",
+      "runtimeVariants": [
+        {
+          "id": "sensevoice-small-legacy",
+          "backend": "legacy",
+          "engineType": "sherpaOnnxOffline",
+          "runtimeLabel": "sherpa-onnx · ONNX Runtime",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "sensevoice-small",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "zipformer-20m",
+      "displayName": "Zipformer Streaming",
+      "parameterCount": "20M",
+      "sizeOnDisk": "~46 MB",
+      "description": "Real-time streaming English. Ultra-low latency.",
+      "family": "zipformer",
+      "languages": "English",
+      "runtimeVariants": [
+        {
+          "id": "zipformer-20m-legacy",
+          "backend": "legacy",
+          "engineType": "sherpaOnnxStreaming",
+          "runtimeLabel": "sherpa-onnx · Streaming",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "zipformer-20m",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "omnilingual-300m",
+      "displayName": "Omnilingual 300M",
+      "parameterCount": "300M",
+      "sizeOnDisk": "~365 MB",
+      "description": "1,600+ languages. Facebook MMS CTC model, int8 quantized.",
+      "family": "omnilingual",
+      "languages": "1,600+ languages",
+      "runtimeVariants": [
+        {
+          "id": "omnilingual-300m-legacy",
+          "backend": "legacy",
+          "engineType": "sherpaOnnxOffline",
+          "runtimeLabel": "sherpa-onnx · ONNX Runtime",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "omnilingual-300m",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "parakeet-tdt-v3",
+      "displayName": "Parakeet TDT 0.6B",
+      "parameterCount": "600M",
+      "sizeOnDisk": "~600 MB",
+      "description": "Best English WER (2.5%). 25 European languages. ~1.2 GB RAM.",
+      "family": "parakeet",
+      "languages": "25 European languages",
+      "runtimeVariants": [
+        {
+          "id": "parakeet-tdt-v3-legacy",
+          "backend": "legacy",
+          "engineType": "fluidAudio",
+          "runtimeLabel": "FluidAudio · CoreML",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "parakeet-tdt-v3",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "qwen3-asr-0.6b",
+      "displayName": "Qwen3 ASR 0.6B",
+      "parameterCount": "600M",
+      "sizeOnDisk": "~1.8 GB",
+      "description": "30 languages. Pure C inference with NEON + Accelerate. ~2.7 GB RAM.",
+      "family": "qwenASR",
+      "languages": "30 languages",
+      "runtimeVariants": [
+        {
+          "id": "qwen3-asr-0.6b-legacy",
+          "backend": "legacy",
+          "engineType": "qwenASR",
+          "runtimeLabel": "QwenASR · Pure C",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "qwen3-asr-0.6b",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    },
+    {
+      "id": "apple-speech",
+      "displayName": "Apple Speech",
+      "parameterCount": "System",
+      "sizeOnDisk": "Built-in",
+      "description": "Apple's native on-device speech recognition. 50+ languages, no download required.",
+      "family": "appleSpeech",
+      "languages": "50+ languages",
+      "runtimeVariants": [
+        {
+          "id": "apple-speech-legacy",
+          "backend": "legacy",
+          "engineType": "appleSpeech",
+          "runtimeLabel": "Apple Speech · On-device",
+          "platforms": ["ios", "macOS", "catalyst"],
+          "architectures": [],
+          "minimumOSVersion": null,
+          "legacyModelId": "apple-speech",
+          "artifacts": [],
+          "isEnabled": true
+        }
+      ]
+    }
+  ]
+}
