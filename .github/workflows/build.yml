@@ -119,7 +119,7 @@ jobs:
           app_path="$volume/OfflineTranscriptionMac.app"
           [ -d "$app_path" ] || { echo "App bundle missing in DMG" >&2; exit 1; }
           codesign --verify --deep --strict --verbose=2 "$app_path"
-          hdiutil detach "$device"
+          hdiutil detach "$volume" || hdiutil detach "$device" || true
 
           shasum -a 256 "$dmg_path" | tee build/macos-dmg.sha256
 
