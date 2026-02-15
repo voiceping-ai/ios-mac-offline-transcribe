@@ -7,13 +7,13 @@ All inference runs on-device after model download.
 
 | Model Selection | Transcription Result |
 |---|---|
-| ![Model Selection](artifacts/screenshots/macos-home.png) | ![Transcription](artifacts/screenshots/macos-transcription.png) |
+| ![Model Selection](docs/screenshots/macos-home.png) | ![Transcription](docs/screenshots/macos-transcription.png) |
 
 ### File Transcription Demo
 
-![File Transcription Demo](artifacts/screenshots/macos-file-transcription-demo.gif)
+![File Transcription Demo](docs/screenshots/macos-file-transcription-demo.gif)
 
-> SenseVoice Small transcribing a 30s audio file in ~2 seconds on MacBook Air M4.
+> SenseVoice Small transcribing a 30s audio file in ~2 seconds on MacBook Air M4. [Full video (MP4)](docs/screenshots/macos-file-transcription-demo.mp4).
 
 ## Current Scope (Code-Accurate)
 

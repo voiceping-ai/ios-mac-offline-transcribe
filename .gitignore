@@ -51,6 +51,7 @@ GoogleService-Info.plist
 # === Test Evidence / Screenshots ===
 artifacts/
 screenshots/
+!docs/screenshots/
 
 # === Claude Code ===
 .claude/
