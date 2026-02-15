@@ -111,35 +111,9 @@ Note: translation APIs exist in the service layer, but this repo build is transc
 
 Defined in `OfflineTranscription/Models/ModelInfo.swift` and `OfflineTranscription/Resources/model-catalog.default.json`. 15 model cards across 8 families, with multiple inference backends per Whisper and Qwen3 model. Model ID links point to the **original model** from the research team; runtime distribution links are in the "Model Origins" table below.
 
-### macOS Benchmark
+### iOS Benchmark (iPad Pro 3rd gen, A12X Bionic)
 
-MacBook Air M4, 32 GB RAM. Low Power Mode on during benchmark. 30s English speech (16kHz mono WAV). Sorted by tok/s.
-
-![macOS Inference Speed](docs/macos_tokens_per_second.svg)
-
-| Model ID | Engine | Params | Disk | Languages | tok/s | Notes |
-|---|---|---:|---:|---|---:|---|
-| [`parakeet-tdt-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) | FluidAudio (CoreML) | 600M | ~600 MB | 25 European | 171.6 | |
-| [`moonshine-tiny`](https://huggingface.co/usefulsensors/moonshine-tiny) | sherpa-onnx offline | 27M | ~125 MB | English | 92.2 | |
-| [`zipformer-20m`](https://github.com/k2-fsa/icefall) | sherpa-onnx streaming | 20M | ~46 MB | English | 77.4 | |
-| [`moonshine-base`](https://huggingface.co/usefulsensors/moonshine-base) | sherpa-onnx offline | 61M | ~280 MB | English | 59.3 | |
-| [`sensevoice-small`](https://huggingface.co/FunAudioLLM/SenseVoiceSmall) | sherpa-onnx offline | 234M | ~240 MB | zh/en/ja/ko/yue | 27.4 | |
-| [`whisper-tiny`](https://huggingface.co/openai/whisper-tiny) | WhisperKit (CoreML) | 39M | ~80 MB | 99 languages | 24.7 | |
-| [`whisper-base`](https://huggingface.co/openai/whisper-base) | WhisperKit (CoreML) | 74M | ~150 MB | English† | 23.3 | |
-| [`apple-speech`](https://developer.apple.com/documentation/speech/sfspeechrecognizer) | SFSpeechRecognizer | System | Built-in | 50+ languages | 13.1 | Requires Dictation enabled |
-| [`whisper-small`](https://huggingface.co/openai/whisper-small) | WhisperKit (CoreML) | 244M | ~500 MB | 99 languages | 8.7 | |
-| [`qwen3-asr-0.6b-onnx`](https://huggingface.co/Qwen/Qwen3-ASR-0.8B) | ONNX Runtime (INT8) | 600M | ~1.6 GB | 30 languages | 8.0 | |
-| [`qwen3-asr-0.6b`](https://huggingface.co/Qwen/Qwen3-ASR-0.8B) | Pure C (ARM NEON) | 600M | ~1.8 GB | 30 languages | 5.7 | |
-| [`whisper-large-v3-turbo`](https://huggingface.co/openai/whisper-large-v3-turbo) | WhisperKit (CoreML) | 809M | ~600 MB | 99 languages | 1.9 | |
-| [`whisper-large-v3-turbo-compressed`](https://huggingface.co/openai/whisper-large-v3-turbo) | WhisperKit (CoreML) | 809M | ~1 GB | 99 languages | 1.5 | |
-| [`qwen3-asr-0.6b-mlx`](https://huggingface.co/Qwen/Qwen3-ASR-0.8B) | MLX (Metal GPU) | 600M | ~400 MB | 30 languages | — | Not yet benchmarked |
-| [`omnilingual-300m`](https://huggingface.co/facebook/mms-1b-all) | sherpa-onnx offline | 300M | ~365 MB | 1,600+ languages | 0.03 | FAIL — English output broken |
-
-> † whisper-base (WhisperKit) uses `.en` English-only variant due to multilingual CoreML conversion issues.
-
-### iOS Benchmark
-
-iPad Pro 3rd gen (A12X Bionic, 4 GB RAM). 30s English speech (16kHz mono WAV). Sorted by tok/s.
+4 GB RAM. 30s English speech (16kHz mono WAV). Sorted by tok/s.
 
 ![iOS Inference Speed](docs/ios_tokens_per_second.svg)
 
@@ -166,6 +140,32 @@ iPad Pro 3rd gen (A12X Bionic, 4 GB RAM). 30s English speech (16kHz mono WAV). S
 > † whisper-base (WhisperKit) uses `.en` English-only variant due to multilingual CoreML conversion issues.
 > ‡ WhisperKit E2E FAIL on 4 GB iPad — CoreML compilation OOM. Timing is from cached (pre-compiled) CoreML runs; first run adds 30-120s compilation.
 > RTF = inference time / audio duration; < 1.0 = faster than real-time.
+
+### macOS Benchmark (MacBook Air M4)
+
+32 GB RAM. Low Power Mode on during benchmark. 30s English speech (16kHz mono WAV). Sorted by tok/s.
+
+![macOS Inference Speed](docs/macos_tokens_per_second.svg)
+
+| Model ID | Engine | Params | Disk | Languages | tok/s | Notes |
+|---|---|---:|---:|---|---:|---|
+| [`parakeet-tdt-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) | FluidAudio (CoreML) | 600M | ~600 MB | 25 European | 171.6 | |
+| [`moonshine-tiny`](https://huggingface.co/usefulsensors/moonshine-tiny) | sherpa-onnx offline | 27M | ~125 MB | English | 92.2 | |
+| [`zipformer-20m`](https://github.com/k2-fsa/icefall) | sherpa-onnx streaming | 20M | ~46 MB | English | 77.4 | |
+| [`moonshine-base`](https://huggingface.co/usefulsensors/moonshine-base) | sherpa-onnx offline | 61M | ~280 MB | English | 59.3 | |
+| [`sensevoice-small`](https://huggingface.co/FunAudioLLM/SenseVoiceSmall) | sherpa-onnx offline | 234M | ~240 MB | zh/en/ja/ko/yue | 27.4 | |
+| [`whisper-tiny`](https://huggingface.co/openai/whisper-tiny) | WhisperKit (CoreML) | 39M | ~80 MB | 99 languages | 24.7 | |
+| [`whisper-base`](https://huggingface.co/openai/whisper-base) | WhisperKit (CoreML) | 74M | ~150 MB | English† | 23.3 | |
+| [`apple-speech`](https://developer.apple.com/documentation/speech/sfspeechrecognizer) | SFSpeechRecognizer | System | Built-in | 50+ languages | 13.1 | Requires Dictation enabled |
+| [`whisper-small`](https://huggingface.co/openai/whisper-small) | WhisperKit (CoreML) | 244M | ~500 MB | 99 languages | 8.7 | |
+| [`qwen3-asr-0.6b-onnx`](https://huggingface.co/Qwen/Qwen3-ASR-0.8B) | ONNX Runtime (INT8) | 600M | ~1.6 GB | 30 languages | 8.0 | |
+| [`qwen3-asr-0.6b`](https://huggingface.co/Qwen/Qwen3-ASR-0.8B) | Pure C (ARM NEON) | 600M | ~1.8 GB | 30 languages | 5.7 | |
+| [`whisper-large-v3-turbo`](https://huggingface.co/openai/whisper-large-v3-turbo) | WhisperKit (CoreML) | 809M | ~600 MB | 99 languages | 1.9 | |
+| [`whisper-large-v3-turbo-compressed`](https://huggingface.co/openai/whisper-large-v3-turbo) | WhisperKit (CoreML) | 809M | ~1 GB | 99 languages | 1.5 | |
+| [`qwen3-asr-0.6b-mlx`](https://huggingface.co/Qwen/Qwen3-ASR-0.8B) | MLX (Metal GPU) | 600M | ~400 MB | 30 languages | — | Not yet benchmarked |
+| [`omnilingual-300m`](https://huggingface.co/facebook/mms-1b-all) | sherpa-onnx offline | 300M | ~365 MB | 1,600+ languages | 0.03 | FAIL — English output broken |
+
+> † whisper-base (WhisperKit) uses `.en` English-only variant due to multilingual CoreML conversion issues.
 
 ### Model Origins
 
