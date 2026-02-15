@@ -319,11 +319,21 @@ scripts/ios-e2e-test.sh
 scripts/ios-ui-flow-tests.sh
 ```
 
-## Privacy
+## Privacy & Network Usage
 
-- Audio is processed locally on device.
-- Network is used for model downloads only.
-- No cloud transcription service is required for runtime inference.
+All audio recording and transcription run locally on device. The app makes **no analytics, telemetry, or crash-reporting calls**. Network is used only for model downloads, listed below:
+
+| Connection | Destination | When | Data Sent |
+|---|---|---|---|
+| sherpa-onnx model download | `huggingface.co/csukuangfj/*` | User selects a Moonshine, SenseVoice, Whisper (sherpa), Zipformer, or Omnilingual model | None (HTTPS GET only) |
+| WhisperKit model download | `huggingface.co/argmaxinc/whisperkit-coreml` | User selects a Whisper model (WhisperKit backend) | None (HTTPS GET only) |
+| whisper.cpp model download | `huggingface.co/ggerganov/whisper.cpp` | User selects a Whisper model (whisper.cpp backend) | None (HTTPS GET only) |
+| FluidAudio model download | `huggingface.co/FluidInference/*` | User selects Parakeet TDT | None (HTTPS GET only) |
+| Qwen3 ASR download (CPU/ONNX) | `huggingface.co/Qwen/*`, `huggingface.co/jima/*` | User selects Qwen3 ASR (CPU or ONNX) | None (HTTPS GET only) |
+| Qwen3 ASR download (MLX) | `huggingface.co/mlx-community/*` | User selects Qwen3 ASR MLX backend (macOS) | None (HTTPS GET only) |
+| Apple Speech | System built-in | User selects Apple Speech model | None — `requiresOnDeviceRecognition = true` |
+
+All model downloads are user-initiated (on model selection), cached locally, and never re-downloaded once present. No user audio, transcription text, or usage data leaves the device.
 
 ## License
 
