@@ -26,7 +26,6 @@ final class WhisperServiceTests: XCTestCase {
     // MARK: - Iteration 1
     func testInitialState() {
         let s = WhisperService()
-        XCTAssertNil(s.whisperKit)
         XCTAssertEqual(s.modelState, .unloaded)
         XCTAssertFalse(s.isRecording)
         XCTAssertFalse(s.isTranscribing)

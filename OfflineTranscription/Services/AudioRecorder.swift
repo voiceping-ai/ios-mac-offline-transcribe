@@ -17,19 +17,20 @@ final class AudioRecorder {
     /// Called on the main actor whenever new audio arrives.
     var onNewAudio: (([Float]) -> Void)?
 
-    /// Cap audioSamples to prevent unbounded memory growth during long recordings.
-    /// 16000 samples/sec × 1800 sec = 28.8M samples ≈ 30 minutes (~115 MB max).
-    private static let maxAudioSamples = 28_800_000
+    private static let maxAudioSamples = AudioConstants.maxAudioSamples
 
-    private let sampleRate: Double = 16000
-    private let bufferSize: AVAudioFrameCount = 4096
+    private let sampleRate: Double = AudioConstants.sampleRate
+    private let bufferSize: AVAudioFrameCount = AudioConstants.bufferSize
 
-    /// Cap energy array to prevent unbounded memory growth during long recordings.
-    /// ~100 frames/sec × 600 sec = 60k frames ≈ 10 minutes of visualization data.
-    private static let maxEnergyFrames = 60000
+    private static let maxEnergyFrames = AudioConstants.maxEnergyFrames
 
     func startRecording(captureMode: AudioCaptureMode = .microphone) async throws {
         guard !isRecording else { return }
+
+        // Pre-allocate buffers to reduce reallocations during recording
+        if audioSamples.isEmpty {
+            audioSamples.reserveCapacity(960_000)
+        }
 
         // Request microphone permission
         #if os(macOS)
@@ -111,13 +112,7 @@ final class AudioRecorder {
 
             guard !samples.isEmpty else { return }
 
-            // Compute energy normalized to 0–1 (dBFS scale: -60 dB → 0, 0 dB → 1).
-            // This matches WhisperKit's relativeEnergy range so the shared VAD
-            // threshold (default 0.3 ≈ −42 dBFS) works for all engines.
-            let sumSquares = samples.reduce(Float(0)) { $0 + $1 * $1 }
-            let rms = sqrt(sumSquares / Float(samples.count))
-            let dbFS = 20 * log10(max(rms, 1e-10))
-            let normalizedEnergy = max(0, min(1, (dbFS + 60) / 60))
+            let normalizedEnergy = AudioConstants.normalizedEnergy(of: samples)
 
             Task { @MainActor [weak self] in
                 guard let self else { return }

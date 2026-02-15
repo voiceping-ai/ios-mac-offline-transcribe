@@ -119,7 +119,7 @@ Defined in `OfflineTranscription/Models/ModelInfo.swift` and `OfflineTranscripti
 
 | Model ID | Engine | Params | Disk | Languages | tok/s | Notes |
 |---|---|---:|---:|---|---:|---|
-| [`parakeet-tdt-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) | FluidAudio (CoreML) | 600M | ~600 MB | 25 European | 181.8 | |
+| [`parakeet-tdt-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) | FluidAudio (CoreML) | 600M | ~600 MB | 25 European | 181.8 | |
 | [`zipformer-20m`](https://github.com/k2-fsa/icefall) | sherpa-onnx streaming | 20M | ~46 MB | English | 39.7 | |
 | [`whisper-tiny`](https://huggingface.co/openai/whisper-tiny) | whisper.cpp | 39M | 32 MB | 99 languages | 37.8 | |
 | [`moonshine-tiny`](https://huggingface.co/usefulsensors/moonshine-tiny) | sherpa-onnx offline | 27M | ~125 MB | English | 37.3 | |
@@ -149,7 +149,7 @@ Defined in `OfflineTranscription/Models/ModelInfo.swift` and `OfflineTranscripti
 
 | Model ID | Engine | Params | Disk | Languages | tok/s | Notes |
 |---|---|---:|---:|---|---:|---|
-| [`parakeet-tdt-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) | FluidAudio (CoreML) | 600M | ~600 MB | 25 European | 171.6 | |
+| [`parakeet-tdt-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) | FluidAudio (CoreML) | 600M | ~600 MB | 25 European | 171.6 | |
 | [`moonshine-tiny`](https://huggingface.co/usefulsensors/moonshine-tiny) | sherpa-onnx offline | 27M | ~125 MB | English | 92.2 | |
 | [`zipformer-20m`](https://github.com/k2-fsa/icefall) | sherpa-onnx streaming | 20M | ~46 MB | English | 77.4 | |
 | [`moonshine-base`](https://huggingface.co/usefulsensors/moonshine-base) | sherpa-onnx offline | 61M | ~280 MB | English | 59.3 | |
@@ -178,7 +178,7 @@ Original models vs runtime distribution formats used by each engine.
 | SenseVoice | [Alibaba FunAudioLLM](https://huggingface.co/FunAudioLLM/SenseVoiceSmall) | Apache 2.0 | [sherpa-onnx INT8](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17) |
 | Zipformer | [k2-fsa / icefall](https://github.com/k2-fsa/icefall) | Apache 2.0 | [sherpa-onnx](https://huggingface.co/csukuangfj/sherpa-onnx-streaming-zipformer-en-20M-2023-02-17) |
 | Omnilingual | [Facebook MMS](https://huggingface.co/facebook/mms-1b-all) | CC-BY-NC 4.0 | [sherpa-onnx INT8](https://huggingface.co/csukuangfj2/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12) |
-| Parakeet TDT | [NVIDIA NeMo](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) | CC-BY 4.0 | FluidAudio CoreML · [FluidInference/parakeet-tdt-0.6b-v3-coreml](https://huggingface.co/FluidInference/parakeet-tdt-0.6b-v3-coreml) |
+| Parakeet TDT | [NVIDIA NeMo](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) | CC-BY 4.0 | FluidAudio CoreML · [FluidInference/parakeet-tdt-0.6b-v3-coreml](https://huggingface.co/FluidInference/parakeet-tdt-0.6b-v3-coreml) |
 | Qwen3 ASR | [Alibaba Qwen](https://huggingface.co/Qwen/Qwen3-ASR-0.8B) | Apache 2.0 | [antirez/qwen-asr](https://github.com/antirez/qwen-asr) (Pure C) · ONNX INT8 · [MLX 4-bit](https://huggingface.co/mlx-community/Qwen3-ASR-0.6B-4bit) |
 | Apple Speech | [Apple](https://developer.apple.com/documentation/speech) | System built-in | On-device (no download) |
 

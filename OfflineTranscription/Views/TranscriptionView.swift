@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 #if os(macOS)
 import AppKit
 #endif
@@ -9,6 +10,7 @@ struct TranscriptionView: View {
     @State private var showSettings = false
 
     @State private var recordingStartDate: Date?
+    @State private var elapsedSeconds: Int = 0
     @State private var triggerBroadcast = false
     @State private var lastAutoScrollAt: Date = .distantPast
 
@@ -190,6 +192,7 @@ struct TranscriptionView: View {
             .onChange(of: viewModel?.isRecording ?? false) { _, isRecording in
                 if isRecording {
                     recordingStartDate = Date()
+                    elapsedSeconds = 0
                     lastAutoScrollAt = Date()
                     proxy.scrollTo("bottom", anchor: .bottom)
                 } else {
@@ -259,26 +262,23 @@ struct TranscriptionView: View {
     @ViewBuilder
     private var resourceStatsSection: some View {
         if let vm = viewModel {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                let elapsed: Int = if let start = recordingStartDate, vm.isRecording {
-                    Int(context.date.timeIntervalSince(start))
-                } else {
-                    0
+            HStack(spacing: 16) {
+                if vm.isRecording {
+                    Text("\(elapsedSeconds)s")
                 }
-                HStack(spacing: 16) {
-                    if vm.isRecording {
-                        Text("\(elapsed)s")
-                    }
-                    Text(String(format: "CPU %.0f%%", vm.cpuPercent))
-                    Text(String(format: "RAM %.0f MB", vm.memoryMB))
-                    if vm.tokensPerSecond > 0 {
-                        Text(String(format: "%.1f tok/s", vm.tokensPerSecond))
-                    }
+                Text(String(format: "CPU %.0f%%", vm.cpuPercent))
+                Text(String(format: "RAM %.0f MB", vm.memoryMB))
+                if vm.tokensPerSecond > 0 {
+                    Text(String(format: "%.1f tok/s", vm.tokensPerSecond))
                 }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
             .padding(.vertical, 4)
+            .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+                guard let start = recordingStartDate else { return }
+                elapsedSeconds = Int(Date().timeIntervalSince(start))
+            }
         }
     }
 

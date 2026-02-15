@@ -176,7 +176,6 @@ final class ModelLifecycleTests: XCTestCase {
     func testInitialModelState() {
         let s = WhisperService()
         XCTAssertEqual(s.modelState, .unloaded)
-        XCTAssertNil(s.whisperKit)
         XCTAssertNil(s.currentModelVariant)
     }
 

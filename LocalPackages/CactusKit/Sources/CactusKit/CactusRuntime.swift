@@ -40,7 +40,11 @@ public final class CactusRuntime: @unchecked Sendable {
         let modelPath = try findModelFile()
 
         var params = whisper_context_default_params()
+        #if targetEnvironment(simulator)
+        params.use_gpu = false
+        #else
         params.use_gpu = true
+        #endif
 
         guard let ctx = whisper_init_from_file_with_params(modelPath, params) else {
             throw NSError(
