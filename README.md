@@ -115,6 +115,8 @@ Defined in `OfflineTranscription/Models/ModelInfo.swift` and `OfflineTranscripti
 
 MacBook Air M4, 32 GB RAM. Low Power Mode on during benchmark. 30s English speech (16kHz mono WAV). Sorted by tok/s.
 
+![macOS Inference Speed](docs/macos_tokens_per_second.svg)
+
 | Model ID | Engine | Params | Disk | Languages | tok/s | Notes |
 |---|---|---:|---:|---|---:|---|
 | [`parakeet-tdt-v3`](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) | FluidAudio (CoreML) | 600M | ~600 MB | 25 European | 171.6 | |
@@ -138,6 +140,8 @@ MacBook Air M4, 32 GB RAM. Low Power Mode on during benchmark. 30s English speec
 ### iOS Benchmark
 
 iPad Pro 3rd gen (A12X Bionic, 4 GB RAM). 30s English speech (16kHz mono WAV). Sorted by tok/s.
+
+![iOS Inference Speed](docs/ios_tokens_per_second.svg)
 
 | Model ID | Engine | Params | Disk | Languages | tok/s | Notes |
 |---|---|---:|---:|---|---:|---|
